@@ -46,6 +46,9 @@
 #define beg_namespace_cpphibernate_misc         cpphibernate_define_namespace_beg(beg_namespace_cpphibernate, misc)
 #define end_namespace_cpphibernate_misc         cpphibernate_define_namespace_end(end_namespace_cpphibernate)
 
+#define beg_namespace_cpphibernate_modifier     cpphibernate_define_namespace_beg(beg_namespace_cpphibernate, modifier)
+#define end_namespace_cpphibernate_modifier     cpphibernate_define_namespace_end(end_namespace_cpphibernate)
+
 beg_namespace_cpphibernate
 {
 

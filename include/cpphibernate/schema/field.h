@@ -4,6 +4,7 @@
 #include <cpphibernate/config.h>
 #include <cpphibernate/schema/getter.h>
 #include <cpphibernate/schema/setter.h>
+#include <cpphibernate/schema/attributes.h>
 
 #include <cpputils/misc/indent.h>
 #include <cpputils/misc/type_helper.h>
