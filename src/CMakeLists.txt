@@ -14,6 +14,7 @@ Set                         ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${PEDANTIC_CXX
 # Dependencies ####################################################################################
 
 Find_Package                ( cpputils REQUIRED )
+Find_Package                ( cppmariadb REQUIRED )
 
 # Project: cpphibernate ###############################################################################
 
@@ -27,6 +28,7 @@ Target_Include_Directories  (
 Target_Link_Libraries       (
                                 cpphibernate
                                 cpputils
+                                cppmariadb
                             )
 If                          ( __COTIRE_INCLUDED )
     Cotire                      ( cpphibernate )

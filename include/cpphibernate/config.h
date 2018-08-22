@@ -40,14 +40,20 @@
 #define beg_namespace_cpphibernate              namespace cpphibernate
 #define end_namespace_cpphibernate
 
-#define beg_namespace_cpphibernate_schema       cpphibernate_define_namespace_beg(beg_namespace_cpphibernate, schema)
-#define end_namespace_cpphibernate_schema       cpphibernate_define_namespace_end(end_namespace_cpphibernate)
+#define beg_namespace_cpphibernate_schema           cpphibernate_define_namespace_beg(beg_namespace_cpphibernate, schema)
+#define end_namespace_cpphibernate_schema           cpphibernate_define_namespace_end(end_namespace_cpphibernate)
 
-#define beg_namespace_cpphibernate_misc         cpphibernate_define_namespace_beg(beg_namespace_cpphibernate, misc)
-#define end_namespace_cpphibernate_misc         cpphibernate_define_namespace_end(end_namespace_cpphibernate)
+#define beg_namespace_cpphibernate_misc             cpphibernate_define_namespace_beg(beg_namespace_cpphibernate, misc)
+#define end_namespace_cpphibernate_misc             cpphibernate_define_namespace_end(end_namespace_cpphibernate)
 
-#define beg_namespace_cpphibernate_modifier     cpphibernate_define_namespace_beg(beg_namespace_cpphibernate, modifier)
-#define end_namespace_cpphibernate_modifier     cpphibernate_define_namespace_end(end_namespace_cpphibernate)
+#define beg_namespace_cpphibernate_modifier         cpphibernate_define_namespace_beg(beg_namespace_cpphibernate, modifier)
+#define end_namespace_cpphibernate_modifier         cpphibernate_define_namespace_end(end_namespace_cpphibernate)
+
+#define beg_namespace_cpphibernate_driver           cpphibernate_define_namespace_beg(beg_namespace_cpphibernate, driver)
+#define end_namespace_cpphibernate_driver           cpphibernate_define_namespace_end(end_namespace_cpphibernate)
+
+#define beg_namespace_cpphibernate_driver_mariadb   cpphibernate_define_namespace_beg(beg_namespace_cpphibernate_driver, mariadb_impl)
+#define end_namespace_cpphibernate_driver_mariadb   cpphibernate_define_namespace_end(end_namespace_cpphibernate_driver)
 
 beg_namespace_cpphibernate
 {

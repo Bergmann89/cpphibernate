@@ -15,7 +15,7 @@ beg_namespace_cpphibernate_modifier
         struct where_clause_and_t
             : public where_clause_t
         {
-            using clauses_type = hana::basic_tuple<T_clauses...>;
+            using clauses_type = hana::tuple<T_clauses...>;
 
             clauses_type clauses;
 

@@ -96,14 +96,6 @@ beg_namespace_cpphibernate_misc
         struct real_dataset_impl<std::list<T>, void>
             { using type = typename real_dataset_impl<T>::type; };
 
-        template<typename T_from, typename T_to, typename = void>
-        struct change_dataset_type_impl
-            { using type = T_to; };
-
-        template<template<typename...> class X, typename T_from, typename T_to>
-        struct change_dataset_type_impl<X<T_from>, T_to, void>
-            { using type = X<T_to>; };
-
     }
 
     /* meta */

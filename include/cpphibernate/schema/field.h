@@ -72,28 +72,6 @@ beg_namespace_cpphibernate_schema
             }
         };
 
-        /* field_builder */
-
-        template<typename X, typename = void>
-        struct field_builder
-        {
-            template <typename ...T_args>
-            static constexpr decltype(auto) apply(T_args&&... args)
-                { static_assert(sizeof...(args) == -1, "Invalid parameters for hibernate::schema::make_field(...)!"); }
-        };
-
-        template<typename T_name, typename T_getter, typename T_setter, typename T_attributes>
-        struct field_builder<mp::list<T_name, T_getter, T_setter, T_attributes>, mp::enable_if_c<
-                is_getter<mp::decay_t<T_getter>>::value
-            &&  is_setter<mp::decay_t<T_setter>>::value
-            &&  is_attributes<mp::decay_t<T_attributes>>::value>>
-        {
-            using field_type = field_t<T_name, T_getter, T_setter, T_attributes>;
-
-            static constexpr decltype(auto) apply(T_name&& name, T_getter&& getter, T_setter&& setter, T_attributes&& attributes)
-                { return field_type(std::forward<T_name>(name), std::forward<T_getter>(getter), std::forward<T_setter>(setter), std::forward<T_attributes>(attributes)); }
-        };
-
     }
 
     /* meta */
@@ -108,9 +86,41 @@ beg_namespace_cpphibernate_schema
         : public mp::all_true<is_field<T>::value...>
         { };
 
-    /* make */
+    /* operations */
 
-    constexpr decltype(auto) make_field = misc::make_generic_predicate<__impl::field_builder> { };
+    namespace __impl
+    {
+
+        /* field_make_impl */
+
+        template<typename X, typename = void>
+        struct field_make_impl
+        {
+            template <typename ...T_args>
+            static constexpr decltype(auto) apply(T_args&&... args)
+                { static_assert(sizeof...(args) == -1, "Invalid parameters for hibernate::schema::field::make(...)!"); }
+        };
+
+        template<typename T_name, typename T_getter, typename T_setter, typename T_attributes>
+        struct field_make_impl<mp::list<T_name, T_getter, T_setter, T_attributes>, mp::enable_if_c<
+                is_getter<mp::decay_t<T_getter>>::value
+            &&  is_setter<mp::decay_t<T_setter>>::value
+            &&  is_attributes<mp::decay_t<T_attributes>>::value>>
+        {
+            using field_type = field_t<T_name, T_getter, T_setter, T_attributes>;
+
+            static constexpr decltype(auto) apply(T_name&& name, T_getter&& getter, T_setter&& setter, T_attributes&& attributes)
+                { return field_type(std::forward<T_name>(name), std::forward<T_getter>(getter), std::forward<T_setter>(setter), std::forward<T_attributes>(attributes)); }
+        };
+
+    }
+
+    namespace field
+    {
+
+        constexpr decltype(auto) make = misc::make_generic_predicate<__impl::field_make_impl> { };
+
+    }
 
 }
 end_namespace_cpphibernate_schema

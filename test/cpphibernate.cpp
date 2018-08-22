@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <cpphibernate.h>
+#include <cpphibernate/driver/mariadb.h>
 
 using namespace ::cpphibernate;
 
@@ -124,5 +125,7 @@ constexpr decltype(auto) test_schema = cpphibernate_make_schema(
 
 TEST(CppHibernateTests, fuuu)
 {
-    std::cout << test_schema << std::endl;
+    ::cppmariadb::connection connection(reinterpret_cast<MYSQL*>(0x1234));
+    auto context = make_context<driver::mariadb>(test_schema, connection);   
+    std::cout << context.schema() << std::endl;
 }
