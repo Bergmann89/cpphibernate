@@ -38,6 +38,6 @@
 
 #define cpphibernate_make_id(p_member_ptr)                              \
     cpphibernate_make_field_name(                                       \
-        "p_id",                                                         \
+        id,                                                             \
         p_member_ptr,                                                   \
         cpphibernate::schema::attribute::primary_key)

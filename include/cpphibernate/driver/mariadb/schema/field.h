@@ -2,6 +2,9 @@
 
 #include <cpphibernate/misc.h>
 #include <cpphibernate/config.h>
+#include <cpphibernate/schema/field.h>
+#include <cpphibernate/schema/table.h>
+#include <cpphibernate/schema/schema.h>
 #include <cpphibernate/driver/mariadb/schema/field.fwd.h>
 #include <cpphibernate/driver/mariadb/schema/table.fwd.h>
 #include <cpphibernate/driver/mariadb/schema/attributes.h>
@@ -40,6 +43,8 @@ beg_namespace_cpphibernate_driver_mariadb
             , referenced_table  (nullptr)
             { }
         virtual ~field_t() = default;
+
+        void print(std::ostream& os) const;
     };
 
     /* simple_field_t */

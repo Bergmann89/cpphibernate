@@ -57,6 +57,8 @@ beg_namespace_cpphibernate_driver_mariadb
             , data_fields               ()
             { }
         virtual ~table_t() = default;
+
+        void print(std::ostream& os) const;
     };
 
     /* table_simple_t */

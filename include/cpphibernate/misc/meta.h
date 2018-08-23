@@ -6,6 +6,7 @@
 
 #include <cpphibernate/config.h>
 
+#include <cpputils/misc/exception.h>
 #include <cpputils/container/nullable.h>
 
 beg_namespace_cpphibernate_misc
@@ -117,6 +118,14 @@ beg_namespace_cpphibernate_misc
 
     template<typename T>
     using real_dataset_t = typename __impl::real_dataset_impl<T>::type;
+
+    /* hibernate_exception */
+
+    struct hibernate_exception
+        : public utl::exception
+    {
+        using utl::exception::exception;
+    };
 
 }
 end_namespace_cpphibernate_misc

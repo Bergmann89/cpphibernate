@@ -9,7 +9,7 @@
 
 beg_namespace_cpphibernate_driver_mariadb
 {
-    
+
     /* attributes_t */
 
     struct attributes_t :
