@@ -5,13 +5,14 @@
 #include <cpphibernate/schema/field.h>
 #include <cpphibernate/schema/table.h>
 #include <cpphibernate/schema/schema.h>
+#include <cpphibernate/driver/mariadb/helper.h>
 #include <cpphibernate/driver/mariadb/schema/field.fwd.h>
 #include <cpphibernate/driver/mariadb/schema/table.fwd.h>
 #include <cpphibernate/driver/mariadb/schema/attributes.h>
 
 beg_namespace_cpphibernate_driver_mariadb
 {
-    
+
     /* field_t */
 
     struct field_t
@@ -42,9 +43,13 @@ beg_namespace_cpphibernate_driver_mariadb
             , table             (nullptr)
             , referenced_table  (nullptr)
             { }
-        virtual ~field_t() = default;
+        virtual ~field_t() { };
 
         void print(std::ostream& os) const;
+
+        /* properties */
+        virtual std::string type                    () const;
+        virtual std::string create_table_arguments  () const;
     };
 
     /* simple_field_t */
@@ -72,9 +77,17 @@ beg_namespace_cpphibernate_driver_mariadb
     struct value_field_t
         : public simple_field_t<T_schema, T_field>
     {
-        using base_type = simple_field_t<T_schema, T_field>;
+        using base_type         = simple_field_t<T_schema, T_field>;
+        using schema_type       = T_schema;
+        using field_type        = T_field;
+        using getter_type       = typename mp::decay_t<field_type>::getter_type;
+        using dataset_type      = typename getter_type::dataset_type;
+        using value_type        = typename getter_type::value_type;
+        using type_props        = type_properties<value_type>;
 
         using base_type::base_type;
+
+        virtual std::string type() const override;
     };
 
     /* primary_key_field_t */
@@ -83,9 +96,15 @@ beg_namespace_cpphibernate_driver_mariadb
     struct primary_key_field_t
         : public value_field_t<T_schema, T_field>
     {
-        using base_type = value_field_t<T_schema, T_field>;
+        using base_type     = value_field_t<T_schema, T_field>;
+        using schema_type   = typename base_type::schema_type;
+        using field_type    = typename base_type::field_type;
+        using value_type    = typename base_type::value_type;
+        using key_props     = key_properties<value_type>;
 
         using base_type::base_type;
+
+        virtual std::string create_table_arguments() const override;
     };
 
     /* data_field_t */
@@ -179,15 +198,21 @@ beg_namespace_cpphibernate_driver_mariadb
                 using dataset_type          = mp::decay_t<typename getter_type::dataset_type>;
                 using value_dataset_type    = misc::real_dataset_t<value_type>;
                 using return_type           = field_type_t<schema_type, field_type>;
+                using primary_key_type      = primary_key_field_t<schema_type, field_type>;
                 return_type ret(schema, field);
-                ret.table_dataset_id   = misc::get_type_id(hana::type_c<dataset_type>),
-                ret.value_dataset_id   = misc::get_type_id(hana::type_c<value_dataset_type>),
-                ret.value_is_nullable  = misc::is_nullable<value_type>::value,
-                ret.value_is_container = misc::is_container<value_type>::value,
-                ret.schema_name        = schema.name,
-                ret.table_name         = table.name,
-                ret.field_name         = field.name,
+                ret.table_dataset_id   = misc::get_type_id(hana::type_c<dataset_type>);
+                ret.value_dataset_id   = misc::get_type_id(hana::type_c<value_dataset_type>);
+                ret.value_is_nullable  = misc::is_nullable<value_type>::value;
+                ret.value_is_container = misc::is_container<value_type>::value;
+                ret.schema_name        = schema.name;
+                ret.table_name         = table.name;
+                ret.field_name         = field.name;
                 ret.attributes         = make_attributes(field.attributes);
+                hana::eval_if(
+                    hana::equal(hana::type_c<return_type>, hana::type_c<primary_key_type>),
+                    [&ret](){
+                        ret.field_name = ret.table_name + "_" + ret.field_name;
+                    }, [](){ });
                 return ret;
             }
         };

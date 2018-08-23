@@ -9,6 +9,7 @@
 #include <cpphibernate/driver/mariadb/schema/field.h>
 #include <cpphibernate/driver/mariadb/schema/table.h>
 
+using namespace ::std;
 using namespace ::utl;
 using namespace ::cpphibernate::driver::mariadb_impl;
 
@@ -29,3 +30,14 @@ void field_t::print(std::ostream& os) const
         << decindent
         << indent << '}';
 }
+
+#define throw_not_implemented(p_ret, p_name)                    \
+    p_ret field_t::p_name() const                               \
+    {                                                           \
+        throw misc::hibernate_exception(                        \
+            std::string("'") + table_name + "." + field_name +  \
+            "' does not implement the " #p_name "() method!");  \
+    }
+
+throw_not_implemented(string, type)
+throw_not_implemented(string, create_table_arguments)

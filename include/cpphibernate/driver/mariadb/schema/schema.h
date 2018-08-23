@@ -2,12 +2,13 @@
 
 #include <cpphibernate/misc.h>
 #include <cpphibernate/config.h>
+#include <cpphibernate/driver/mariadb/helper/context.h>
 #include <cpphibernate/driver/mariadb/schema/tables.h>
 #include <cpphibernate/driver/mariadb/schema/schema.fwd.h>
 
 beg_namespace_cpphibernate_driver_mariadb
 {
-    
+
     /* schema_t */
 
     struct schema_t
@@ -24,6 +25,9 @@ beg_namespace_cpphibernate_driver_mariadb
 
         void update ();
         void print  (std::ostream& os) const;
+
+        /* CRUD */
+        void init(const init_context& context) const;
     };
 
     namespace __impl

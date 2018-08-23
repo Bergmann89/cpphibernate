@@ -3,16 +3,18 @@
 #include <memory>
 #include <vector>
 
+#include <cppmariadb.h>
 #include <cpphibernate/misc.h>
 #include <cpphibernate/config.h>
 #include <cpphibernate/schema/table.h>
 #include <cpphibernate/schema/schema.h>
 #include <cpphibernate/driver/mariadb/schema/fields.h>
 #include <cpphibernate/driver/mariadb/schema/table.fwd.h>
+#include <cpphibernate/driver/mariadb/helper/context.h>
 
 beg_namespace_cpphibernate_driver_mariadb
 {
-    
+
     /* table_t */
 
     struct table_t
@@ -56,9 +58,23 @@ beg_namespace_cpphibernate_driver_mariadb
             , foreign_table_many_fields ()
             , data_fields               ()
             { }
-        virtual ~table_t() = default;
+        virtual ~table_t() { };
 
         void print(std::ostream& os) const;
+
+        /* CRUD */
+        inline void init(const init_context& context) const
+            { return init_intern(context); }
+
+    private:
+        using statement_ptr = std::unique_ptr<::cppmariadb::statement>;
+
+        mutable statement_ptr _statement_create_table;
+
+        ::cppmariadb::statement& get_statement_create_table() const;
+
+    protected:
+        void init_intern(const init_context& context) const;
     };
 
     /* table_simple_t */
@@ -70,7 +86,7 @@ beg_namespace_cpphibernate_driver_mariadb
         using schema_type       = T_schema;
         using table_type        = T_table;
         using base_dataset_type = T_base_dataset;
-        
+
         const schema_type&  schema;
         const table_type&   table;
 
@@ -98,9 +114,9 @@ beg_namespace_cpphibernate_driver_mariadb
         using schema_type       = T_schema;
         using table_type        = T_table;
         using base_dataset_type = T_base_dataset;
-        
+
         using base_type::base_type;
-        
+
         const schema_type&  schema;
         const table_type&   table;
     };

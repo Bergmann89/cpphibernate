@@ -1,62 +1,91 @@
-#include <gtest/gtest.h>
 #include <cpphibernate.h>
-#include <cpphibernate/driver/mariadb.h>
 
-using namespace ::cpphibernate;
+enum class test_enum
+{
+    test0,
+    test1,
+    test2,
+    test3,
+
+    first = test0,
+    last  = test3,
+};
+
+DEFINE_ENUM_TO_STRING_MAP(
+    test_enum,
+    { test_enum::test0, "test0" },
+    { test_enum::test1, "test1" },
+    { test_enum::test2, "test2" },
+    { test_enum::test3, "test3" }
+);
+
+DEFINE_STRING_TO_ENUM_MAP(
+    test_enum,
+    invariant_string_less,
+    { "test0", test_enum::test0 },
+    { "test1", test_enum::test1 },
+    { "test2", test_enum::test2 },
+    { "test3", test_enum::test3 }
+);
 
 struct test1
 {
-    uuid                    id;
-    std::string             str_data;
-    string<64>              str64_data;
+    ::cpphibernate::uuid        id;
+    std::string                 str_data;
+    ::cpphibernate::string<64>  str64_data;
+
+    utl::nullable<uint32_t>     u32_nullable;
+    std::unique_ptr<uint32_t>   u32_ptr_u;
+    std::shared_ptr<uint32_t>   u32_ptr_s;
 };
 
 struct test2
 {
-    uuid                    id;
-    uint8_t                 u8_data;
-    int8_t                  i8_data;
-    uint16_t                u16_data;
-    int16_t                 i16_data;
+    ::cpphibernate::uuid        id;
+    uint8_t                     u8_data;
+    int8_t                      i8_data;
+    uint16_t                    u16_data;
+    int16_t                     i16_data;
 };
 
 struct test3
 {
-    uuid                    id;
-    uint32_t                u32_data;
-    int32_t                 i32_data;
-    uint64_t                u64_data;
-    int64_t                 i64_data;
+    ::cpphibernate::uuid        id;
+    uint32_t                    u32_data;
+    int32_t                     i32_data;
+    uint64_t                    u64_data;
+    int64_t                     i64_data;
 };
 
 struct base
 {
-    uuid                    id;
-    std::string             name;
+    ::cpphibernate::uuid        id;
+    std::string                 name;
 };
 
 struct derived1
     : public base
 {
-    uuid                    derived1_id;
-    test1                   test1_data;
+    ::cpphibernate::uuid        derived1_id;
+    test1                       test1_data;
+    test_enum                   enum_data;
 };
 
 struct derived2
     : public base
 {
-    uuid                    derived2_id;
-    utl::nullable<test2>    test2_nullable;
-    std::unique_ptr<test2>  test2_ptr_u;
-    std::shared_ptr<test2>  test2_ptr_s;
+    ::cpphibernate::uuid        derived2_id;
+    utl::nullable<test2>        test2_nullable;
+    std::unique_ptr<test2>      test2_ptr_u;
+    std::shared_ptr<test2>      test2_ptr_s;
 };
 
 struct derived3
     : public derived1
 {
-    uuid                    derived3_id;
-    std::list<test3>        test3_list;
-    std::vector<test3>      test3_vector;
+    ::cpphibernate::uuid        derived3_id;
+    std::list<test3>            test3_list;
+    std::vector<test3>          test3_vector;
 };
 
 constexpr decltype(auto) test_schema = cpphibernate_make_schema(
@@ -67,7 +96,10 @@ constexpr decltype(auto) test_schema = cpphibernate_make_schema(
         1,
         cpphibernate_make_id          (&test1::id),
         cpphibernate_make_field       (test1, str_data),
-        cpphibernate_make_field       (test1, str64_data)
+        cpphibernate_make_field       (test1, str64_data),
+        cpphibernate_make_field       (test1, u32_nullable),
+        cpphibernate_make_field       (test1, u32_ptr_u),
+        cpphibernate_make_field       (test1, u32_ptr_s)
     ),
     cpphibernate_make_table_name(
         tbl_test2,
@@ -102,7 +134,8 @@ constexpr decltype(auto) test_schema = cpphibernate_make_schema(
         derived1,
         11,
         cpphibernate_make_id          (&derived1::derived1_id),
-        cpphibernate_make_field       (derived1, test1_data)
+        cpphibernate_make_field       (derived1, test1_data),
+        cpphibernate_make_field       (derived1, enum_data)
     ),
     cpphibernate_make_table_name(
         tbl_derived2,
@@ -122,10 +155,3 @@ constexpr decltype(auto) test_schema = cpphibernate_make_schema(
         cpphibernate_make_field       (derived3, test3_vector)
     )
 );
-
-TEST(CppHibernateTests, fuuu)
-{
-    ::cppmariadb::connection connection(reinterpret_cast<MYSQL*>(0x1234));
-    auto context = make_context<driver::mariadb>(test_schema, connection);   
-    std::cout << context.schema() << std::endl;
-}

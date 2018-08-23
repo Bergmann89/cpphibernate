@@ -13,3 +13,5 @@
 #include <cpphibernate/driver/mariadb/schema/schema.h>
 #include <cpphibernate/driver/mariadb/schema/table.h>
 #include <cpphibernate/driver/mariadb/schema/tables.h>
+
+#include <cpphibernate/driver/mariadb/schema/field.inl>

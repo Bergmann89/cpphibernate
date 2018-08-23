@@ -3,6 +3,14 @@
 #include <boost/hana.hpp>
 #include <cpputils/mp/core.h>
 
+#define cpphibernate_debug
+#ifdef cpphibernate_debug
+#   include <cpputils/logging/global.h>
+#   define cpphibernate_debug_log(...) log_global_message(debug) << __VA_ARGS__
+#else
+#   define cpphibernate_debug_log(...) do { } while(0)
+#endif
+
 #define cpphibernate_equality_comparable()                                          \
     template<typename T_other>                                                      \
     constexpr decltype(auto) operator==(T_other&&) const                            \

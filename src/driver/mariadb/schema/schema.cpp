@@ -1,5 +1,5 @@
 #include <string>
-#include <iostream>
+#include <sstream>
 
 #include <cpputils/misc/enum.h>
 #include <cpputils/misc/string.h>
@@ -110,3 +110,82 @@ void schema_t::print(std::ostream& os) const
         << decindent
         << indent << '}';
 }
+
+#define exec_query()                                                \
+    do {                                                            \
+        cpphibernate_debug_log("execute init query: " << ss.str()); \
+        connection.execute(ss.str());                               \
+        ss.str(std::string());                                      \
+        ss.clear();                                                 \
+    } while(0)
+
+void schema_t::init(const init_context& context) const
+{
+    std::ostringstream ss;
+    auto& connection = context.connection;
+
+    if (context.recreate)
+    {
+        ss  <<  "DROP DATABASE IF EXISTS `"
+            <<  schema_name
+            <<  "`";
+        exec_query();
+    }
+
+    /* create schema */
+    ss  <<  "CREATE SCHEMA IF NOT EXISTS `"
+        <<  schema_name
+        <<  "` DEFAULT CHARACTER SET utf8";
+    exec_query();
+
+    /* use schema */
+    ss  <<  "USE `"
+        <<  schema_name
+        <<  "`";
+    exec_query();
+
+    /* UuidToBin */
+    ss  <<  "CREATE FUNCTION IF NOT EXISTS UuidToBin(_uuid CHAR(36))\n"
+            "   RETURNS BINARY(16)\n"
+            "   LANGUAGE SQL\n"
+            "   DETERMINISTIC\n"
+            "   CONTAINS SQL\n"
+            "   SQL SECURITY INVOKER\n"
+            "RETURN\n"
+            "   UNHEX(CONCAT(\n"
+            "       SUBSTR(_uuid, 25, 12),\n" // node id
+            "       SUBSTR(_uuid, 20,  4),\n" // clock sequence
+            "       SUBSTR(_uuid, 15,  4),\n" // time high and version
+            "       SUBSTR(_uuid, 10,  4),\n" // time mid
+            "       SUBSTR(_uuid,  1,  8)\n"  // time low
+            "   )\n"
+            ")";
+    exec_query();
+
+    /* BinToUuid */
+    ss  <<  "CREATE FUNCTION IF NOT EXISTS BinToUuid(_bin BINARY(16))\n"
+            "    RETURNS CHAR(36)\n"
+            "    LANGUAGE SQL\n"
+            "    DETERMINISTIC\n"
+            "    CONTAINS SQL\n"
+            "    SQL SECURITY INVOKER\n"
+            "RETURN\n"
+            "    LCASE(CONCAT_WS('-',\n"
+            "        HEX(SUBSTR(_bin, 13, 4)),\n" // time low
+            "        HEX(SUBSTR(_bin, 11, 2)),\n" // time mid
+            "        HEX(SUBSTR(_bin,  9, 2)),\n" // time high and version
+            "        HEX(SUBSTR(_bin,  7, 2)),\n" // clock sequence
+            "        HEX(SUBSTR(_bin,  1, 6))\n"  // node id
+            "   )\n"
+            ")";
+    exec_query();
+
+    /* initialize tables */
+    for (auto& kvp : tables)
+    {
+        assert(kvp.second);
+        kvp.second->init(context);
+    }
+}
+
+#undef exec_query
