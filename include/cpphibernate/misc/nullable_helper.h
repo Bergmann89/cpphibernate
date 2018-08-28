@@ -18,8 +18,9 @@ beg_namespace_cpphibernate_misc
         using nullable_type = T_nullable;
         using value_type    = real_dataset_t<nullable_type>;
 
-        static value_type*  get   (nullable_type&)                              = delete;
-        static void         reset (nullable_type&, value_type* value = nullptr) = delete;
+        static value_type*  get   (const nullable_type&)                = delete;
+        static value_type&  set   (nullable_type&, const value_type&)   = delete;
+        static void         clear (nullable_type&)                      = delete;
     };
 
     /* nullable_helper - utl::nullable */
@@ -31,15 +32,19 @@ beg_namespace_cpphibernate_misc
         using value_type    = T_value;
 
         static inline value_type* get(nullable_type& x)
-        {
-            return x.has_value() ? &x.value() : nullptr;
-        }
+            { return x.has_value() ? &x.value() : nullptr; }
 
-        static void reset(nullable_type& x, value_type* value = nullptr)
-        {
-            if (value)  x.reset();
-            else        x = *value;
-        }
+        static inline const value_type* get(const nullable_type& x)
+            { return x.has_value() ? &x.value() : nullptr; }
+
+        static inline value_type& set(nullable_type& x, const value_type& value)
+            { return *(x = value); }
+
+        static inline value_type& set(nullable_type& x, value_type&& value)
+            { return *(x = std::move(value)); }
+
+        static void clear(nullable_type& x)
+            { x.reset(); }
     };
 
     /* nullable_helper - std::unique_ptr */
@@ -50,11 +55,23 @@ beg_namespace_cpphibernate_misc
         using nullable_type = std::unique_ptr<T_value>;
         using value_type    = T_value;
 
-        static inline value_type* get(nullable_type& x)
+        static inline value_type* get(const nullable_type& x)
             { return x.get(); }
 
-        static void reset(nullable_type& x, value_type* value = nullptr)
-            { return x.reset(value); }
+        static inline value_type& set(nullable_type& x, value_type&& value)
+        {
+            x.reset(new value_type(std::move(value)));
+            return *x;
+        }
+
+        static inline value_type& set(nullable_type& x, const value_type& value)
+        {
+            x.reset(new value_type(value));
+            return *x;
+        }
+
+        static void clear(nullable_type& x)
+            { return x.reset(); }
     };
 
     /* nullable_helper - std::shared_ptr */
@@ -65,11 +82,23 @@ beg_namespace_cpphibernate_misc
         using nullable_type = std::shared_ptr<T_value>;
         using value_type    = T_value;
 
-        static inline value_type* get(nullable_type& x)
+        static inline value_type* get(const nullable_type& x)
             { return x.get(); }
 
-        static void reset(nullable_type& x, value_type* value = nullptr)
-            { return x.reset(value); }
+        static inline value_type& set(nullable_type& x, value_type&& value)
+        {
+            x.reset(new value_type(std::move(value)));
+            return *x;
+        }
+
+        static inline value_type& set(nullable_type& x, const value_type& value)
+        {
+            x.reset(new value_type(value));
+            return *x;
+        }
+
+        static void clear(nullable_type& x)
+            { return x.reset(); }
     };
 
 }

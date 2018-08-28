@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <gmock/gmock.h>
 #include <mariadb/errmsg.h>
 #include <mariadb/mysqld_error.h>
@@ -60,11 +61,18 @@
 #define CLIENT_SSL_VERIFY_SERVER_CERT   (1UL << 30)
 #define CLIENT_REMEMBER_OPTIONS         (1UL << 31)
 
-struct MariaDbMock
+struct mariadb_mock_item
+{
+    virtual ~mariadb_mock_item() = default;
+};
+
+struct mariadb_mock
 {
 private:
-    static void setInstance(MariaDbMock* value);
-    static void clearInstance(MariaDbMock* value);
+    static void setInstance(mariadb_mock* value);
+    static void clearInstance(mariadb_mock* value);
+
+    std::vector<std::unique_ptr<mariadb_mock_item>> _items;
 
 public:
     MOCK_METHOD1(mysql_num_rows,           my_ulonglong    (MYSQL_RES *res));
@@ -90,10 +98,19 @@ public:
     MOCK_METHOD8(mysql_real_connect,       MYSQL*          (MYSQL *mysql, const char *host, const char *user, const char *passwd, const char *db, unsigned int port, const char *unix_socket, unsigned long clientflag));
     MOCK_METHOD1(mysql_init,               MYSQL*          (MYSQL *mysql));
 
-    MariaDbMock()
+    ::testing::Sequence sequence;
+
+    template<typename T_item>
+    T_item& store(T_item&& item)
+    {
+        _items.emplace_back(new T_item(std::forward<T_item>(item)));
+        return *static_cast<T_item*>(_items.back().get());
+    }
+
+    mariadb_mock()
         { setInstance(this); }
 
-    ~MariaDbMock()
+    ~mariadb_mock()
         { clearInstance(this); }
 };
 

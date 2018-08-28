@@ -33,6 +33,6 @@ Target_Link_Libraries       (
 If                          ( __COTIRE_INCLUDED )
     Cotire                      ( cpphibernate )
 EndIf                       ( )
-If                          ( __STRIP_SYMBOLS_INCLUDED )
+If                          ( __STRIP_SYMBOLS_INCLUDED AND BUILD_SHARED_LIBS )
     Strip_Symbols               ( cpphibernate DBG_FILE )
 EndIf                       ()

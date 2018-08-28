@@ -19,6 +19,7 @@ beg_namespace_cpphibernate_schema
         {
             using name_type             = T_name;
             using wrapped_dataset_type  = mp::decay_t<T_wrapped_dataset>;
+            using dataset_type          = misc::decay_unwrap_t<wrapped_dataset_type>;
             using table_id_type         = T_table_id;
             using fields_type           = T_fields;
             using this_type             = table_t<name_type, wrapped_dataset_type, table_id_type, fields_type>;

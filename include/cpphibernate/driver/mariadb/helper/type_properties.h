@@ -223,9 +223,9 @@ beg_namespace_cpphibernate_driver_mariadb
 
         static inline nullable_type convert_to(const value_t& value)
         {
-            auto ret = nullable_helper_type::make();
+            nullable_type ret;
             if (value.has_value())
-                nullable_helper_type::fill(ret, value_type_props::convert_to(value));
+                nullable_helper_type::set(ret, value_type_props::convert_to(value));
             return ret;
         }
 

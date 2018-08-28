@@ -31,13 +31,97 @@ void field_t::print(std::ostream& os) const
         << indent << '}';
 }
 
-#define throw_not_implemented(p_ret, p_name)                    \
-    p_ret field_t::p_name() const                               \
+#define throw_not_implemented(p_ret, p_name, ...)               \
+    p_ret field_t::p_name(__VA_ARGS__) const                    \
     {                                                           \
         throw misc::hibernate_exception(                        \
             std::string("'") + table_name + "." + field_name +  \
             "' does not implement the " #p_name "() method!");  \
     }
 
-throw_not_implemented(string, type)
-throw_not_implemented(string, create_table_arguments)
+/* CRUD */
+
+throw_not_implemented(value_t,  foreign_create, const create_context&)
+throw_not_implemented(value_t,  foreign_update, const update_context&)
+
+/* properties */
+
+throw_not_implemented(string,   type)
+throw_not_implemented(string,   create_table_arguments)
+throw_not_implemented(string,   generate_value, ::cppmariadb::connection&)
+throw_not_implemented(value_t,  get)
+throw_not_implemented(void,     set, const value_t&)
+
+bool field_t::is_auto_generated() const
+    { return false; }
+
+std::string field_t::convert_to_open() const
+{
+    std::ostringstream ss;
+    for (auto it = this->attributes.begin(); it != this->attributes.end(); ++it)
+    {
+        switch(*it)
+        {
+            case attribute_t::hex:         ss << "HEX(";       break;
+            case attribute_t::compress:    ss << "COMPRESS(";  break;
+            case attribute_t::primary_key:                     break;
+        }
+    }
+    return ss.str();
+}
+
+std::string field_t::convert_to_close() const
+{
+    std::ostringstream ss;
+    for (auto it = this->attributes.begin(); it != this->attributes.end(); ++it)
+    {
+        switch(*it)
+        {
+            case attribute_t::hex:
+            case attribute_t::compress:
+                ss << ')';
+                break;
+            case attribute_t::primary_key:
+                break;
+        }
+    }
+    return ss.str();
+}
+
+std::string field_t::convert_from_open() const
+{
+    std::ostringstream ss;
+    for (auto it = this->attributes.rbegin(); it != this->attributes.rend(); ++it)
+    {
+        switch(*it)
+        {
+            case attribute_t::hex:
+                ss << "UNHEX(";
+                break;
+            case attribute_t::compress:
+                ss << "UNCOMPRESS(";
+                break;
+            case attribute_t::primary_key:
+                break;
+        }
+    }
+    return ss.str();
+}
+
+std::string field_t::convert_from_close() const
+{
+    std::ostringstream ss;
+    for (auto it = this->attributes.rbegin(); it != this->attributes.rend(); ++it)
+    {
+        switch(*it)
+        {
+            case attribute_t::hex:
+            case attribute_t::compress:
+                ss << ')';
+                break;
+            case attribute_t::primary_key:
+                break;
+        }
+    }
+    return ss.str();
+}

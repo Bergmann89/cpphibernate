@@ -111,6 +111,15 @@ void schema_t::print(std::ostream& os) const
         << indent << '}';
 }
 
+const table_t& schema_t::table(size_t dataset_id) const
+{
+    auto it = tables.find(dataset_id);
+    if (it == tables.end())
+        throw misc::hibernate_exception(std::string("unable to find table for dataset with id ") + std::to_string(dataset_id));
+    assert(static_cast<bool>(it->second));
+    return *it->second;
+}
+
 #define exec_query()                                                \
     do {                                                            \
         cpphibernate_debug_log("execute init query: " << ss.str()); \

@@ -27,12 +27,28 @@ beg_namespace_cpphibernate_driver_mariadb
     protected:
         inline void init_impl(bool recreate) const
         {
-            make_init_impl(init_context
+            init_impl_t<init_context>::apply(init_context
             {
                 _schema,
                 _connection,
                 recreate
-            })();
+            });
+        }
+
+        template<typename T_dataset>
+        inline void create_impl(T_dataset& dataset) const
+        {
+            using create_context_type = generic_create_context<T_dataset>;
+            create_impl_t<create_context_type>::apply(create_context_type
+            {
+                {
+                    _schema,
+                    nullptr,
+                    nullptr,
+                    _connection
+                },
+                dataset
+            });
         }
     };
 

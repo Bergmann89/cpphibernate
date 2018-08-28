@@ -61,6 +61,8 @@ struct base
 {
     ::cpphibernate::uuid        id;
     std::string                 name;
+
+    virtual ~base() = default;
 };
 
 struct derived1
@@ -81,7 +83,7 @@ struct derived2
 };
 
 struct derived3
-    : public derived1
+    : public derived2
 {
     ::cpphibernate::uuid        derived3_id;
     std::list<test3>            test3_list;

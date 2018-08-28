@@ -26,6 +26,8 @@ beg_namespace_cpphibernate_driver_mariadb
         void update ();
         void print  (std::ostream& os) const;
 
+        const table_t& table(size_t dataset_id) const;
+
         /* CRUD */
         void init(const init_context& context) const;
     };

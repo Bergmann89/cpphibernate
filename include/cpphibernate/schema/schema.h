@@ -180,7 +180,7 @@ beg_namespace_cpphibernate_schema
     /* schema::get_all_derived_types */
 
     namespace __impl
-    {        
+    {
         struct schema_get_all_derived_types_impl
         {
             template<typename T_wrapped_dataset>
@@ -192,7 +192,7 @@ beg_namespace_cpphibernate_schema
                 constexpr decltype(auto) operator()(T_type&&) const
                 {
                     return hana::bool_c<
-                        std::is_base_of<dataset_type, misc::unwrap_t<T_type>>::value>;
+                        std::is_base_of<dataset_type, misc::decay_unwrap_t<T_type>>::value>;
                 }
             };
 
@@ -245,7 +245,7 @@ beg_namespace_cpphibernate_schema
             }
         };
     }
-    
+
     constexpr decltype(auto) get_derived_types = __impl::schema_get_derived_types_impl { };
 
 }

@@ -47,9 +47,21 @@ beg_namespace_cpphibernate_driver_mariadb
 
         void print(std::ostream& os) const;
 
+        /* CRUD */
+        virtual value_t foreign_create(const create_context& context) const;
+        virtual value_t foreign_update(const update_context& context) const;
+
         /* properties */
         virtual std::string type                    () const;
         virtual std::string create_table_arguments  () const;
+        virtual std::string generate_value          (::cppmariadb::connection& connection) const;
+        virtual bool        is_auto_generated       () const;
+        virtual std::string convert_to_open         () const;
+        virtual std::string convert_to_close        () const;
+        virtual std::string convert_from_open       () const;
+        virtual std::string convert_from_close      () const;
+        virtual value_t     get                     () const;
+        virtual void        set                     (const value_t&) const;
     };
 
     /* simple_field_t */
@@ -58,8 +70,12 @@ beg_namespace_cpphibernate_driver_mariadb
     struct simple_field_t
         : public field_t
     {
-        using schema_type = T_schema;
-        using field_type  = T_field;
+        using schema_type   = T_schema;
+        using field_type    = T_field;
+        using getter_type   = typename mp::decay_t<field_type>::getter_type;
+        using dataset_type  = typename getter_type::dataset_type;
+        using value_type    = typename getter_type::value_type;
+        using ref_stack     = reference_stack<dataset_type>;
 
         const schema_type&  schema;
         const field_type&   field;
@@ -77,17 +93,21 @@ beg_namespace_cpphibernate_driver_mariadb
     struct value_field_t
         : public simple_field_t<T_schema, T_field>
     {
-        using base_type         = simple_field_t<T_schema, T_field>;
-        using schema_type       = T_schema;
-        using field_type        = T_field;
-        using getter_type       = typename mp::decay_t<field_type>::getter_type;
-        using dataset_type      = typename getter_type::dataset_type;
-        using value_type        = typename getter_type::value_type;
-        using type_props        = type_properties<value_type>;
+        using base_type     = simple_field_t<T_schema, T_field>;
+        using schema_type   = T_schema;
+        using field_type    = T_field;
+        using getter_type   = typename base_type::getter_type;
+        using dataset_type  = typename base_type::dataset_type;
+        using value_type    = typename base_type::value_type;
+        using ref_stack     = typename base_type::ref_stack;
+        using type_props    = type_properties<value_type>;
+
 
         using base_type::base_type;
 
         virtual std::string type() const override;
+        virtual value_t     get () const override;
+        virtual void        set (const value_t&) const override;
     };
 
     /* primary_key_field_t */
@@ -104,7 +124,13 @@ beg_namespace_cpphibernate_driver_mariadb
 
         using base_type::base_type;
 
-        virtual std::string create_table_arguments() const override;
+        virtual std::string create_table_arguments  () const override;
+        virtual std::string generate_value          (::cppmariadb::connection& connection) const override;
+        virtual bool        is_auto_generated       () const override;
+        virtual std::string convert_to_open         () const override;
+        virtual std::string convert_to_close        () const override;
+        virtual std::string convert_from_open       () const override;
+        virtual std::string convert_from_close      () const override;
     };
 
     /* data_field_t */
@@ -124,9 +150,16 @@ beg_namespace_cpphibernate_driver_mariadb
     struct foreign_table_field_t
         : public simple_field_t<T_schema, T_field>
     {
-        using base_type = simple_field_t<T_schema, T_field>;
+    public:
+        using base_type     = simple_field_t<T_schema, T_field>;
+        using dataset_type  = typename base_type::dataset_type;
+        using ref_stack     = typename base_type::ref_stack;
 
         using base_type::base_type;
+
+    public:
+        virtual value_t foreign_create(const create_context& context) const override;
+        virtual value_t foreign_update(const update_context& context) const override;
     };
 
     namespace __impl

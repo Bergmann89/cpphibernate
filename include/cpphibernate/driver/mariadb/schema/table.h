@@ -10,6 +10,7 @@
 #include <cpphibernate/schema/schema.h>
 #include <cpphibernate/driver/mariadb/schema/fields.h>
 #include <cpphibernate/driver/mariadb/schema/table.fwd.h>
+#include <cpphibernate/driver/mariadb/schema/filter.fwd.h>
 #include <cpphibernate/driver/mariadb/helper/context.h>
 
 beg_namespace_cpphibernate_driver_mariadb
@@ -19,6 +20,7 @@ beg_namespace_cpphibernate_driver_mariadb
 
     struct table_t
     {
+    public:
         size_t                      dataset_id          { 0 };
         size_t                      base_dataset_id     { 0 };
         size_t                      table_id            { 0 };
@@ -62,19 +64,43 @@ beg_namespace_cpphibernate_driver_mariadb
 
         void print(std::ostream& os) const;
 
+        const table_t* get_derived(size_t id) const;
+
         /* CRUD */
         inline void init(const init_context& context) const
-            { return init_intern(context); }
+            { return init_exec(context); }
+
+        inline decltype(auto) create(const create_context& context) const
+            { return create_intern(context); }
+
+        inline void read() const
+            {  }
+
+        inline void update(const update_context& context) const
+            { update_intern(context); }
 
     private:
         using statement_ptr = std::unique_ptr<::cppmariadb::statement>;
 
         mutable statement_ptr _statement_create_table;
+        mutable statement_ptr _statement_insert_into;
 
         ::cppmariadb::statement& get_statement_create_table() const;
+        ::cppmariadb::statement& get_statement_insert_into() const;
+
+        std::string execute_insert_update(
+            const create_context&       context,
+            ::cppmariadb::statement&    statement,
+            const filter_t*             filter) const;
 
     protected:
-        void init_intern(const init_context& context) const;
+                void        init_exec      (const init_context& context) const;
+
+        virtual std::string create_intern  (const create_context& context) const;
+                std::string create_exec    (const create_context& context) const;
+
+        virtual std::string update_intern  (const update_context& context) const;
+                std::string update_exec    (const update_context& context) const;
     };
 
     /* table_simple_t */
@@ -83,9 +109,11 @@ beg_namespace_cpphibernate_driver_mariadb
     struct table_simple_t
         : public table_t
     {
+    public:
         using schema_type       = T_schema;
         using table_type        = T_table;
         using base_dataset_type = T_base_dataset;
+        using dataset_type      = typename table_type::dataset_type;
 
         const schema_type&  schema;
         const table_type&   table;
@@ -110,15 +138,21 @@ beg_namespace_cpphibernate_driver_mariadb
     struct table_polymorphic_t
         : public table_simple_t<T_schema, T_table, T_base_dataset>
     {
+    public:
         using base_type         = table_simple_t<T_schema, T_table, T_base_dataset>;
-        using schema_type       = T_schema;
-        using table_type        = T_table;
-        using base_dataset_type = T_base_dataset;
+        using schema_type       = typename base_type::schema_type;
+        using table_type        = typename base_type::table_type;
+        using base_dataset_type = typename base_type::base_dataset_type;
+        using dataset_type      = typename table_type::dataset_type;
 
         using base_type::base_type;
 
-        const schema_type&  schema;
-        const table_type&   table;
+    private:
+        template<typename T_dataset, typename T_pred, typename T_include_self>
+        constexpr void for_each_derived(T_dataset& dataset, const T_include_self& include_self, const T_pred& pred) const;
+
+    protected:
+        virtual std::string create_intern(const create_context& context) const override;
     };
 
     namespace __impl
@@ -194,6 +228,7 @@ beg_namespace_cpphibernate_driver_mariadb
                 using wrapped_dataset_type          = typename mp::decay_t<T_table>::wrapped_dataset_type;
                 using dataset_type                  = misc::unwrap_t<wrapped_dataset_type>;
                 using table_type                    = table_type_t<dataset_type, base_type>;
+
                 table_type ret(schema, table);
                 ret.dataset_id          = misc::get_type_id(table.wrapped_dataset);
                 ret.base_dataset_id     = misc::get_type_id(wrapped_base_type { });

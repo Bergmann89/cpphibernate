@@ -1,13 +1,13 @@
 #include "mariadb_mock.h"
 
-MariaDbMock* mariadb_mock_instance;
+mariadb_mock* mariadb_mock_instance;
 
-void MariaDbMock::setInstance(MariaDbMock* value)
+void mariadb_mock::setInstance(mariadb_mock* value)
 {
     mariadb_mock_instance = value;
 }
 
-void MariaDbMock::clearInstance(MariaDbMock* value)
+void mariadb_mock::clearInstance(mariadb_mock* value)
 {
     if (mariadb_mock_instance == value)
         mariadb_mock_instance = nullptr;

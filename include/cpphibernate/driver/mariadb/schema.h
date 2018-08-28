@@ -15,3 +15,4 @@
 #include <cpphibernate/driver/mariadb/schema/tables.h>
 
 #include <cpphibernate/driver/mariadb/schema/field.inl>
+#include <cpphibernate/driver/mariadb/schema/table.inl>

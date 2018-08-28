@@ -1,39 +1,16 @@
-#include <gtest/gtest.h>
 #include <cpphibernate/driver/mariadb.h>
 
+#include "test_helper.h"
 #include "test_schema.h"
 #include "mariadb_mock.h"
 
 using namespace ::testing;
 using namespace ::cpphibernate;
 
-template<typename T_mock>
-inline void expect_query(T_mock& mock, const std::string& query)
-{
-    EXPECT_CALL(
-        mock,
-        mysql_real_query(
-            reinterpret_cast<MYSQL*>(0x1111),
-            StrEq(query),
-            query.size()));
-
-    EXPECT_CALL(
-        mock,
-        mysql_store_result(
-            reinterpret_cast<MYSQL*>(0x1111)))
-        .WillOnce(Return(reinterpret_cast<MYSQL_RES*>(0x2222)));
-
-    EXPECT_CALL(
-        mock,
-        mysql_free_result(
-            reinterpret_cast<MYSQL_RES*>(0x2222)));
-}
-
 TEST(CppHibernateTests, init)
 {
-    StrictMock<MariaDbMock> mock;
+    StrictMock<mariadb_mock> mock;
 
-    InSequence seq;
     expect_query(mock,  "START TRANSACTION");
     expect_query(mock,  "DROP DATABASE IF EXISTS `test`");
     expect_query(mock,  "CREATE SCHEMA IF NOT EXISTS `test` DEFAULT CHARACTER SET utf8");
@@ -200,13 +177,13 @@ TEST(CppHibernateTests, init)
     expect_query(mock,  "CREATE TABLE IF NOT EXISTS `tbl_derived3`\n"
                         "(\n"
                         "    `tbl_derived3_id` BINARY(16) NOT NULL,\n"
-                        "    `tbl_derived1_id` BINARY(16) NOT NULL,\n"
+                        "    `tbl_derived2_id` BINARY(16) NOT NULL,\n"
                         "    PRIMARY KEY ( `tbl_derived3_id` ),\n"
                         "    UNIQUE INDEX `index_tbl_derived3_id` ( `tbl_derived3_id` ASC ),\n"
-                        "    UNIQUE INDEX `index_tbl_derived1_id` ( `tbl_derived1_id` ASC ),\n"
-                        "    CONSTRAINT `fk_tbl_derived3_to_tbl_derived1_id`\n"
-                        "        FOREIGN KEY (`tbl_derived1_id`)\n"
-                        "        REFERENCES `test`.`tbl_derived1` (`tbl_derived1_id`)\n"
+                        "    UNIQUE INDEX `index_tbl_derived2_id` ( `tbl_derived2_id` ASC ),\n"
+                        "    CONSTRAINT `fk_tbl_derived3_to_tbl_derived2_id`\n"
+                        "        FOREIGN KEY (`tbl_derived2_id`)\n"
+                        "        REFERENCES `test`.`tbl_derived2` (`tbl_derived2_id`)\n"
                         "        ON DELETE CASCADE\n"
                         "        ON UPDATE NO ACTION\n"
                         ")\n"
