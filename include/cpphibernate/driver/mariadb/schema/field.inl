@@ -13,12 +13,18 @@ beg_namespace_cpphibernate_driver_mariadb
         { return type_props::type(); }
 
     template<typename T_schema, typename T_field>
-    value_t value_field_t<T_schema, T_field>::get() const
-        { return type_props::convert_from(this->field.getter(ref_stack::top())); }
+    value_t value_field_t<T_schema, T_field>::get(const data_context& context) const
+    {
+        auto& dataset = context.get<dataset_type>();
+        return type_props::convert_from(this->field.getter(dataset));
+    }
 
     template<typename T_schema, typename T_field>
-    void value_field_t<T_schema, T_field>::set(const value_t& value) const
-        { this->field.setter(ref_stack::top(), type_props::convert_to(value)); }
+    void value_field_t<T_schema, T_field>::set(const data_context& context, const value_t& value) const
+    {
+        auto& dataset = context.get<dataset_type>();
+        this->field.setter(dataset, type_props::convert_to(value));
+    }
 
     /* primary_key_field_t */
 
@@ -41,8 +47,11 @@ beg_namespace_cpphibernate_driver_mariadb
         { return key_props::auto_generated::value; }
 
     template<typename T_schema, typename T_field>
-    bool primary_key_field_t<T_schema, T_field>::is_default() const
-        { return key_props::is_default(this->field.getter(ref_stack::top())); }
+    bool primary_key_field_t<T_schema, T_field>::is_default(const data_context& context) const
+    {
+        auto& dataset = context.get<dataset_type>();
+        return key_props::is_default(this->field.getter(dataset));
+    }
 
     template<typename T_schema, typename T_field>
     std::string primary_key_field_t<T_schema, T_field>::convert_to_open() const
@@ -66,15 +75,104 @@ beg_namespace_cpphibernate_driver_mariadb
     value_t foreign_table_field_t<T_schema, T_field>
         ::foreign_create_update(const create_update_context& context) const
     {
-        auto& ref     = ref_stack::top();
-        auto& foreign = this->field.getter(ref);
+        auto& dataset       = context.get<dataset_type>();
+        auto& foreign       = this->field.getter(dataset);
+        auto  next_context  = change_context(context, foreign);
 
         using foreign_dataset_type = mp::decay_t<decltype(foreign)>;
-
         return create_update_impl_t<foreign_dataset_type>::apply(
-            foreign,
-            context,
+            next_context,
             false);
+    }
+
+    namespace __impl
+    {
+
+        /* is_primary_key_field */
+
+        template<typename T_field>
+        struct is_primary_key_field
+            : public mp::decay_t<decltype(
+                hana::contains(
+                    std::declval<T_field>().attributes,
+                    schema::attribute::primary_key))>
+            { };
+
+        /* is_foreign_table_field */
+
+        template<typename T_schema, typename T_field>
+        struct is_foreign_table_field
+            : public mp::decay_t<decltype(
+                hana::contains(
+                    hana::transform(
+                        std::declval<T_schema>().tables,
+                        schema::table::get_wrapped_dataset),
+                    hana::type_c<misc::real_dataset_t<typename T_field::getter_type::value_type>>))>
+            { };
+
+        /* field_type */
+
+        template<typename T_schema, typename T_field, typename = void>
+        struct field_type
+            { using type = data_field_t<T_schema, T_field>; };
+
+        template<typename T_schema, typename T_field>
+        struct field_type<T_schema, T_field, mp::enable_if<is_primary_key_field<T_field>>>
+            { using type = primary_key_field_t<T_schema, T_field>; };
+
+        template<typename T_schema, typename T_field>
+        struct field_type<T_schema, T_field, mp::enable_if<is_foreign_table_field<T_schema, T_field>>>
+            { using type = foreign_table_field_t<T_schema, T_field>; };
+
+        template<typename T_schema, typename T_field>
+        using field_type_t = typename field_type<T_schema, T_field>::type;
+
+        /* make_field_impl */
+
+        template<typename T, typename>
+        struct make_field_impl
+        {
+            template<typename... T_args>
+            static constexpr decltype(auto) apply(T_args&&... args)
+                { static_assert(sizeof...(args) == -1, "Invalid parameters for mariadb::make_field(...)!"); }
+        };
+
+        template<typename T_schema, typename T_table, typename T_field>
+        struct make_field_impl<
+            mp::list<T_schema, T_table, T_field>,
+            mp::enable_if_c<
+                    schema::is_schema<mp::decay_t<T_schema>>::value
+                &&  schema::is_table <mp::decay_t<T_table >>::value
+                &&  schema::is_field <mp::decay_t<T_field >>::value>>
+        {
+            static constexpr decltype(auto) apply(const T_schema& schema, const T_table& table, const T_field& field)
+            {
+                using schema_type           = mp::decay_t<T_schema>;
+                using field_type            = mp::decay_t<T_field>;
+                using getter_type           = mp::decay_t<typename field_type::getter_type>;
+                using value_type            = mp::decay_t<typename getter_type::value_type>;
+                using dataset_type          = mp::decay_t<typename getter_type::dataset_type>;
+                using value_dataset_type    = misc::real_dataset_t<value_type>;
+                using return_type           = field_type_t<schema_type, field_type>;
+                using primary_key_type      = primary_key_field_t<schema_type, field_type>;
+                return_type ret(schema, field);
+                ret.table_dataset_id   = misc::get_type_id(hana::type_c<dataset_type>);
+                ret.value_dataset_id   = misc::get_type_id(hana::type_c<value_dataset_type>);
+                ret.value_is_nullable  = misc::is_nullable<value_type>::value;
+                ret.value_is_container = misc::is_container<value_type>::value;
+                ret.schema_name        = schema.name;
+                ret.table_name         = table.name;
+                ret.field_name         = field.name;
+                ret.attributes         = make_attributes(field.attributes);
+                hana::eval_if(
+                    hana::equal(hana::type_c<return_type>, hana::type_c<primary_key_type>),
+                    [&ret](){
+                        ret.field_name = ret.table_name + "_" + ret.field_name;
+                    }, [](){ });
+                return ret;
+            }
+        };
+
     }
 
 }

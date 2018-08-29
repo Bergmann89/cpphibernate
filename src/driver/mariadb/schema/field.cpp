@@ -45,12 +45,12 @@ throw_not_implemented(value_t,  foreign_create_update, const create_update_conte
 
 /* properties */
 
-throw_not_implemented(bool,     is_default)
+throw_not_implemented(bool,     is_default, const data_context& context)
 throw_not_implemented(string,   type)
 throw_not_implemented(string,   create_table_arguments)
 throw_not_implemented(string,   generate_value, ::cppmariadb::connection&)
-throw_not_implemented(value_t,  get)
-throw_not_implemented(void,     set, const value_t&)
+throw_not_implemented(value_t,  get, const data_context& context)
+throw_not_implemented(void,     set, const data_context& context, const value_t&)
 
 bool field_t::is_auto_generated() const
     { return false; }

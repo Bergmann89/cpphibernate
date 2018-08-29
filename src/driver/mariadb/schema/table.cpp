@@ -512,7 +512,7 @@ std::string table_t::execute_create_update(
     }
     else
     {
-        primary_key = *primary_key_field->get();
+        primary_key = *primary_key_field->get(context);
     }
 
     /* base_key */
@@ -546,16 +546,15 @@ std::string table_t::execute_create_update(
     /* foreign fields */
     for (auto& ptr : foreign_key_fields)
     {
+        assert(ptr);
         if (is_update && ptr != context.owner_field)
             continue;
 
         if (    context.owner_field
             &&  ptr == context.owner_field)
         {
-            auto& field_info = *ptr;
-            assert(field_info.table);
-            assert(field_info.table->primary_key_field);
-            statement.set(index, field_info.table->primary_key_field->get());
+            assert(!context.owner_key.empty());
+            statement.set(index, context.owner_key);
         }
         else
             statement.set_null(index);
@@ -568,8 +567,10 @@ std::string table_t::execute_create_update(
         if (is_update && !filter->contains(ptr))
             continue;
         assert(ptr);
+
         auto& field_info = *ptr;
-        auto  value      = field_info.get();
+        auto  value      = field_info.get(context);
+
         if (value.has_value())  statement.set(index, *value);
         else                    statement.set_null(index);
         ++index;
@@ -589,7 +590,7 @@ std::string table_t::execute_create_update(
     if (is_update)
     {
         assert(primary_key_field);
-        statement.set(index, *primary_key_field->get());
+        statement.set(index, *primary_key_field->get(context));
         ++index;
     }
 
@@ -614,7 +615,7 @@ std::string table_t::execute_create_update(
         auto count = connection.execute_rows(statement);
         cpphibernate_debug_log(count << " rows inserted/updated");
     }
-    primary_key_field->set(primary_key);
+    primary_key_field->set(context, primary_key);
 
     /* foreign table many fields */
     for (auto& ptr : foreign_table_many_fields)
@@ -626,7 +627,9 @@ std::string table_t::execute_create_update(
             continue;
 
         auto next_context = context;
-        next_context.owner_field = ptr;
+        next_context.owner_field   = ptr;
+        next_context.owner_key     = primary_key;
+        next_context.derived_table = nullptr;
         ptr->foreign_create_update(next_context);
     }
 
