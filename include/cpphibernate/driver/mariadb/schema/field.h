@@ -48,14 +48,14 @@ beg_namespace_cpphibernate_driver_mariadb
         void print(std::ostream& os) const;
 
         /* CRUD */
-        virtual value_t foreign_create(const create_context& context) const;
-        virtual value_t foreign_update(const update_context& context) const;
+        virtual value_t foreign_create_update(const create_update_context& context) const;
 
         /* properties */
         virtual std::string type                    () const;
         virtual std::string create_table_arguments  () const;
         virtual std::string generate_value          (::cppmariadb::connection& connection) const;
         virtual bool        is_auto_generated       () const;
+        virtual bool        is_default              () const;
         virtual std::string convert_to_open         () const;
         virtual std::string convert_to_close        () const;
         virtual std::string convert_from_open       () const;
@@ -102,7 +102,6 @@ beg_namespace_cpphibernate_driver_mariadb
         using ref_stack     = typename base_type::ref_stack;
         using type_props    = type_properties<value_type>;
 
-
         using base_type::base_type;
 
         virtual std::string type() const override;
@@ -120,6 +119,7 @@ beg_namespace_cpphibernate_driver_mariadb
         using schema_type   = typename base_type::schema_type;
         using field_type    = typename base_type::field_type;
         using value_type    = typename base_type::value_type;
+        using ref_stack     = typename base_type::ref_stack;
         using key_props     = key_properties<value_type>;
 
         using base_type::base_type;
@@ -127,6 +127,7 @@ beg_namespace_cpphibernate_driver_mariadb
         virtual std::string create_table_arguments  () const override;
         virtual std::string generate_value          (::cppmariadb::connection& connection) const override;
         virtual bool        is_auto_generated       () const override;
+        virtual bool        is_default              () const override;
         virtual std::string convert_to_open         () const override;
         virtual std::string convert_to_close        () const override;
         virtual std::string convert_from_open       () const override;
@@ -158,8 +159,7 @@ beg_namespace_cpphibernate_driver_mariadb
         using base_type::base_type;
 
     public:
-        virtual value_t foreign_create(const create_context& context) const override;
-        virtual value_t foreign_update(const update_context& context) const override;
+        virtual value_t foreign_create_update(const create_update_context& context) const override;
     };
 
     namespace __impl

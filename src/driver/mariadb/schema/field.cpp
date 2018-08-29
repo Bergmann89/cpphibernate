@@ -41,11 +41,11 @@ void field_t::print(std::ostream& os) const
 
 /* CRUD */
 
-throw_not_implemented(value_t,  foreign_create, const create_context&)
-throw_not_implemented(value_t,  foreign_update, const update_context&)
+throw_not_implemented(value_t,  foreign_create_update, const create_update_context&)
 
 /* properties */
 
+throw_not_implemented(bool,     is_default)
 throw_not_implemented(string,   type)
 throw_not_implemented(string,   create_table_arguments)
 throw_not_implemented(string,   generate_value, ::cppmariadb::connection&)

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <cpphibernate/driver/mariadb/impl/create.h>
 #include <cpphibernate/driver/mariadb/schema/field.h>
+#include <cpphibernate/driver/mariadb/impl/create_update.h>
 
 beg_namespace_cpphibernate_driver_mariadb
 {
@@ -41,6 +41,10 @@ beg_namespace_cpphibernate_driver_mariadb
         { return key_props::auto_generated::value; }
 
     template<typename T_schema, typename T_field>
+    bool primary_key_field_t<T_schema, T_field>::is_default() const
+        { return key_props::is_default(this->field.getter(ref_stack::top())); }
+
+    template<typename T_schema, typename T_field>
     std::string primary_key_field_t<T_schema, T_field>::convert_to_open() const
         { return key_props::convert_to_open; }
 
@@ -60,34 +64,17 @@ beg_namespace_cpphibernate_driver_mariadb
 
     template<typename T_schema, typename T_field>
     value_t foreign_table_field_t<T_schema, T_field>
-        ::foreign_create(const create_context& context) const
+        ::foreign_create_update(const create_update_context& context) const
     {
         auto& ref     = ref_stack::top();
         auto& foreign = this->field.getter(ref);
 
         using foreign_dataset_type = mp::decay_t<decltype(foreign)>;
-        using create_context_type  = generic_create_context<foreign_dataset_type>;
 
-        return create_impl_t<create_context_type>::apply(
-            create_context_type
-            {
-                context,
-                foreign,
-            },
+        return create_update_impl_t<foreign_dataset_type>::apply(
+            foreign,
+            context,
             false);
-    }
-
-    template<typename T_schema, typename T_field>
-    value_t foreign_table_field_t<T_schema, T_field>
-        ::foreign_update(const update_context& ctx) const
-    {
-        /*
-        auto& context = static_cast<const generic_create_context<dataset_type>&>(ctx);
-        auto& ref     = ref_stack::top();
-        auto& foreign = this->field.getter(ref);
-        return foreign_create_update_helper<update_impl_t>(context.change(foreign));
-        */
-       return value_t { };
     }
 
 }

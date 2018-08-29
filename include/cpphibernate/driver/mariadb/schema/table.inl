@@ -33,11 +33,10 @@ beg_namespace_cpphibernate_driver_mariadb
 
     template<typename T_schema, typename T_table, typename T_base_dataset>
     std::string table_polymorphic_t<T_schema, T_table, T_base_dataset>
-        ::create_intern(const create_context& ctx) const
+        ::create_update_intern(const create_update_context& context) const
     {
         bool  done    = false;
-        auto& context = static_cast<const generic_create_context<dataset_type>&>(ctx);
-        auto& dataset = context.dataset;
+        auto& dataset = reference_stack<dataset_type>::top();
         for_each_derived(dataset, hana::false_c, [&](auto& derived_dataset){
             if (!done)
             {
@@ -46,16 +45,40 @@ beg_namespace_cpphibernate_driver_mariadb
                 auto  derived_dataset_id    = misc::get_type_id(hana::type_c<derived_dataset_type>);
                 auto  derived_table         = this->get_derived(derived_dataset_id);
                 if (!derived_table)
-                    throw misc::hibernate_exception(std::string("unable to find derived table info for dataset '") + utl::type_helper<derived_dataset_type>::name() + "'!");
+                {
+                    throw misc::hibernate_exception(static_cast<std::ostringstream&>(std::ostringstream { }
+                        << "unable to find derived table info for dataset '"
+                        << utl::type_helper<derived_dataset_type>::name() << "'!").str());
+                }
                 auto ref_lock = reference_stack_type::push(derived_dataset);
-                derived_table->create(context.change(derived_dataset, context.owner_field));
+                derived_table->create_update(context);
                 done = true;
             }
         });
 
         return done
             ? *this->primary_key_field->get()
-            : this->create_exec(context);
+            : this->create_update_exec(context);
+    }
+
+    template<typename T_schema, typename T_table, typename T_base_dataset>
+    std::string table_polymorphic_t<T_schema, T_table, T_base_dataset>
+        ::create_update_base(const create_update_context& context) const
+    {
+        return hana::eval_if(
+            mp::is_same<base_dataset_type, void> { },
+            [this]()->std::string {
+                throw misc::hibernate_exception(static_cast<std::ostringstream&>(std::ostringstream { }
+                    << "'" << this->table_name << "' does not have a base table").str());
+            },
+            [this, &context](auto _)->std::string {
+                using tmp_type = misc::decay_unwrap_t<decltype(_(hana::type_c<base_dataset_type>))>;
+                assert(base_table);
+                auto& dataset = reference_stack<dataset_type>::top();
+                auto& base    = static_cast<tmp_type&>(dataset);
+                auto  lock    = reference_stack<tmp_type>::push(base);
+                return this->base_table->create_update_exec(context);
+            });
     }
 
 }

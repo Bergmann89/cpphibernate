@@ -15,6 +15,8 @@ beg_namespace_cpphibernate_driver_mariadb
         virtual ~reference_lock() = default;
     };
 
+    using reference_lock_ptr = std::unique_ptr<reference_lock>;
+
     /* reference_stack */
 
     template<typename T_dataset>

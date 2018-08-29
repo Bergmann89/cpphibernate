@@ -472,9 +472,9 @@ std::string build_insert_update_query(const table_t& table, const filter_t* filt
 /* execute_insert_update */
 
 std::string table_t::execute_insert_update(
-    const create_context&       context,
-    ::cppmariadb::statement&    statement,
-    const filter_t*             filter) const
+    const create_update_context&    context,
+    ::cppmariadb::statement&        statement,
+    const filter_t*                 filter) const
 {
     auto& connection = context.connection;
 
@@ -503,21 +503,10 @@ std::string table_t::execute_insert_update(
         && (   !is_update
             ||  filter->contains(base_table, true)))
     {
-        std::string key;
-        if (is_update)
-        {
-            auto new_context = static_cast<const update_context&>(context);
-            if (!new_context.derived_table)
-                new_context.derived_table = this;
-            key = base_table->update_exec(new_context);
-        }
-        else
-        {
-            auto new_context = context;
-            if (!new_context.derived_table)
-                new_context.derived_table = this;
-            key = base_table->create_exec(new_context);
-        }
+        auto new_context = context;
+        if (!new_context.derived_table)
+            new_context.derived_table = this;
+        std::string key = create_update_base(new_context);
         statement.set(index, std::move(key));
         ++index;
     }
@@ -531,9 +520,7 @@ std::string table_t::execute_insert_update(
         assert(ptr);
         if (is_update && !filter->contains(ptr))
             continue;
-        value_t key = !is_update
-            ? ptr->foreign_create(context)
-            : ptr->foreign_update(static_cast<const update_context&>(context));
+        value_t key = ptr->foreign_create_update(context);
         if (key.has_value())    statement.set(index, std::move(key));
         else                    statement.set_null(index);
         ++index;
@@ -621,18 +608,9 @@ std::string table_t::execute_insert_update(
                 || !filter->contains(ptr->referenced_table, true)))
             continue;
 
-        if (!is_update)
-        {
-            auto next_context = context;
-            next_context.owner_field = ptr;
-            ptr->foreign_create(next_context);
-        }
-        else
-        {
-            auto next_context = static_cast<const update_context&>(context);
-            next_context.owner_field = ptr;
-            ptr->foreign_update(next_context);
-        }
+        auto next_context = context;
+        next_context.owner_field = ptr;
+        ptr->foreign_create_update(next_context);
     }
 
     return primary_key;
@@ -708,6 +686,12 @@ const table_t* table_t::get_derived(size_t id) const
     return *_statement_create_table;
 }
 
+std::string table_t::create_update_base(const create_update_context& context) const
+{
+    throw misc::hibernate_exception(static_cast<std::ostringstream&>(std::ostringstream { }
+        << "'" << this->table_name << "' does not implement create_update_base!").str());
+}
+
 void table_t::init_exec(const init_context& context) const
 {
     auto& statement  = get_statement_create_table();
@@ -716,19 +700,11 @@ void table_t::init_exec(const init_context& context) const
     connection.execute(statement);
 }
 
-std::string table_t::create_exec(const create_context& context) const
+std::string table_t::create_update_exec(const create_update_context& context) const
 {
     auto& statement = get_statement_insert_into();
     return execute_insert_update(context, statement, nullptr);
 }
 
-std::string table_t::update_exec(const update_context& context) const
-{
-    return std::string();
-}
-
-std::string table_t::create_intern(const create_context& context) const
-    { return create_exec(context); }
-
-std::string table_t::update_intern(const update_context& context) const
-    { return update_exec(context); }
+std::string table_t::create_update_intern(const create_update_context& context) const
+    { return create_update_exec(context); }

@@ -70,16 +70,19 @@ beg_namespace_cpphibernate_driver_mariadb
         inline void init(const init_context& context) const
             { return init_exec(context); }
 
-        inline decltype(auto) create(const create_context& context) const
-            { return create_intern(context); }
+        inline decltype(auto) create_update(const create_update_context& context) const
+            { return create_update_intern(context); }
 
         inline void read() const
             {  }
 
-        inline void update(const update_context& context) const
-            { update_intern(context); }
-
     private:
+        template<typename T_schema, typename T_table, typename T_base_dataset>
+        friend struct table_simple_t;
+
+        template<typename T_schema, typename T_table, typename T_base_dataset>
+        friend struct table_polymorphic_t;
+
         using statement_ptr = std::unique_ptr<::cppmariadb::statement>;
 
         mutable statement_ptr _statement_create_table;
@@ -89,18 +92,17 @@ beg_namespace_cpphibernate_driver_mariadb
         ::cppmariadb::statement& get_statement_insert_into() const;
 
         std::string execute_insert_update(
-            const create_context&       context,
-            ::cppmariadb::statement&    statement,
-            const filter_t*             filter) const;
+            const create_update_context&    context,
+            ::cppmariadb::statement&        statement,
+            const filter_t*                 filter) const;
+
+        virtual std::string create_update_base(const create_update_context& context) const;
 
     protected:
-                void        init_exec      (const init_context& context) const;
+                void        init_exec           (const init_context& context) const;
 
-        virtual std::string create_intern  (const create_context& context) const;
-                std::string create_exec    (const create_context& context) const;
-
-        virtual std::string update_intern  (const update_context& context) const;
-                std::string update_exec    (const update_context& context) const;
+        virtual std::string create_update_intern(const create_update_context& context) const;
+                std::string create_update_exec  (const create_update_context& context) const;
     };
 
     /* table_simple_t */
@@ -152,7 +154,10 @@ beg_namespace_cpphibernate_driver_mariadb
         constexpr void for_each_derived(T_dataset& dataset, const T_include_self& include_self, const T_pred& pred) const;
 
     protected:
-        virtual std::string create_intern(const create_context& context) const override;
+        virtual std::string create_update_intern(const create_update_context& context) const override;
+
+    private:
+        virtual std::string create_update_base(const create_update_context& context) const override;
     };
 
     namespace __impl

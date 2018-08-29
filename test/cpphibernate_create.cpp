@@ -6,7 +6,7 @@
 
 using namespace ::testing;
 using namespace ::cpphibernate;
-
+/*
 TEST(CppHibernateTests, create_test1)
 {
     StrictMock<mariadb_mock> mock;
@@ -279,7 +279,7 @@ TEST(CppHibernateTests, create_derived2)
     auto context = make_context<driver::mariadb>(test_schema, connection);
     context.create(static_cast<base&>(d2));
 }
-
+*/
 TEST(CppHibernateTests, create_derived3)
 {
     StrictMock<mariadb_mock> mock;
@@ -435,5 +435,5 @@ TEST(CppHibernateTests, create_derived3)
 
     ::cppmariadb::connection connection(reinterpret_cast<MYSQL*>(0x1111));
     auto context = make_context<driver::mariadb>(test_schema, connection);
-    context.create(static_cast<base&>(d3));
+    context.create(static_cast<derived2&>(d3));
 }
