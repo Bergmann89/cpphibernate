@@ -14,9 +14,9 @@ using namespace ::cpphibernate::driver::mariadb_impl;
 
 /* build queries */
 
-std::string build_create_table_query(const table_t& table)
+std::string build_init_stage1_query(const table_t& table)
 {
-std::ostringstream os;
+    std::ostringstream os;
 
     /* CREATE TABLE */
     os  <<  "CREATE TABLE IF NOT EXISTS `"
@@ -194,14 +194,38 @@ std::ostringstream os;
             <<  "` ASC )";
     }
 
+    /* CREATE TABLE end */
+    os  <<  decindent
+        <<  indent
+        <<  ")"
+        <<  indent
+        <<  "ENGINE = InnoDB"
+        <<  indent
+        <<  "DEFAULT CHARACTER SET = utf8";
+
+    return os.str();
+}
+
+std::string build_init_stage2_query(const table_t& table)
+{
+    std::ostringstream os;
+
+    /* ALTER TABLE */
+    os  <<  "ALTER TABLE `"
+        <<  table.table_name
+        <<  "`"
+        <<  incindent;
+
+    size_t index = 0;
+
     /* CONSTRAINT base table */
     if (table.base_table)
     {
         assert(table.base_table->primary_key_field);
         auto& ref_key_info = *table.base_table->primary_key_field;
-        os  <<  ","
-            <<  indent
-            <<  "CONSTRAINT `fk_"
+        if (index++) os << ",";
+        os  <<  indent
+            <<  "ADD CONSTRAINT `fk_"
             <<  table.table_name
             <<  "_to_"
             <<  ref_key_info.field_name
@@ -234,9 +258,9 @@ std::ostringstream os;
         assert(field_info.referenced_table);
         assert(field_info.referenced_table->primary_key_field);
         auto& ref_key_info = *field_info.referenced_table->primary_key_field;
-        os  <<  ","
-            <<  indent
-            <<  "CONSTRAINT `fk_"
+        if (index++) os << ",";
+        os  <<  indent
+            <<  "ADD CONSTRAINT `fk_"
             <<  table.table_name
             <<  "_to_"
             <<  ref_key_info.table_name
@@ -273,11 +297,11 @@ std::ostringstream os;
         assert(field_info.table);
         assert(field_info.table->primary_key_field);
         auto&  ref_key_info = *field_info.table->primary_key_field;
-        os  <<  ","
-            <<  indent
-            <<  "CONSTRAINT `fk_"
+        if (index++) os << ",";
+        os  <<  indent
+            <<  "ADD CONSTRAINT `fk_"
             <<  table.table_name
-            <<  "_"
+            <<  "_to_"
             <<  field_info.table_name
             <<  "_id_"
             <<  field_info.field_name
@@ -304,19 +328,12 @@ std::ostringstream os;
             <<  decindent;
     }
 
-    /* CREATE TABLE end */
-    os  <<  decindent
-        <<  indent
-        <<  ")"
-        <<  indent
-        <<  "ENGINE = InnoDB"
-        <<  indent
-        <<  "DEFAULT CHARACTER SET = utf8";
-
-    return os.str();
+    return index == 0
+        ? std::string { }
+        : os.str();
 }
 
-std::string build_insert_update_query(const table_t& table, const filter_t* filter, const field_t* owner)
+std::string build_create_update_query(const table_t& table, const filter_t* filter, const field_t* owner)
 {
     std::ostringstream os;
 
@@ -469,9 +486,9 @@ std::string build_insert_update_query(const table_t& table, const filter_t* filt
     return os.str();
 }
 
-/* execute_insert_update */
+/* execute_create_update */
 
-std::string table_t::execute_insert_update(
+std::string table_t::execute_create_update(
     const create_update_context&    context,
     ::cppmariadb::statement&        statement,
     const filter_t*                 filter) const
@@ -672,16 +689,28 @@ const table_t* table_t::get_derived(size_t id) const
 {
     if (_statement_create_table)
         return *_statement_create_table;
-    auto query = build_create_table_query(*this);
+    auto query = build_init_stage1_query(*this);
     _statement_create_table.reset(new ::cppmariadb::statement(query));
     return *_statement_create_table;
+}
+
+::cppmariadb::statement* table_t::get_statement_alter_table() const
+{
+    if (!_statement_alter_table)
+    {
+        auto query = build_init_stage2_query(*this);
+        _statement_alter_table.reset(new ::cppmariadb::statement(query));
+    }
+    if (_statement_alter_table->empty())
+        return nullptr;
+    return _statement_alter_table.get();
 }
 
 ::cppmariadb::statement& table_t::get_statement_insert_into() const
 {
     if (_statement_insert_into)
         return *_statement_insert_into;
-    auto query = build_insert_update_query(*this, nullptr, nullptr);
+    auto query = build_create_update_query(*this, nullptr, nullptr);
     _statement_create_table.reset(new ::cppmariadb::statement(query));
     return *_statement_create_table;
 }
@@ -692,7 +721,7 @@ std::string table_t::create_update_base(const create_update_context& context) co
         << "'" << this->table_name << "' does not implement create_update_base!").str());
 }
 
-void table_t::init_exec(const init_context& context) const
+void table_t::init_stage1_exec(const init_context& context) const
 {
     auto& statement  = get_statement_create_table();
     auto& connection = context.connection;
@@ -700,10 +729,19 @@ void table_t::init_exec(const init_context& context) const
     connection.execute(statement);
 }
 
+void table_t::init_stage2_exec(const init_context& context) const
+{
+    auto* statement  = get_statement_alter_table();
+    auto& connection = context.connection;
+    if (!statement) return;
+    cpphibernate_debug_log("execute ALTER TABLE query: " << statement->query(connection));
+    connection.execute(*statement);
+}
+
 std::string table_t::create_update_exec(const create_update_context& context) const
 {
     auto& statement = get_statement_insert_into();
-    return execute_insert_update(context, statement, nullptr);
+    return execute_create_update(context, statement, nullptr);
 }
 
 std::string table_t::create_update_intern(const create_update_context& context) const

@@ -193,7 +193,12 @@ void schema_t::init(const init_context& context) const
     for (auto& kvp : tables)
     {
         assert(kvp.second);
-        kvp.second->init(context);
+        kvp.second->init_stage1(context);
+    }
+    for (auto& kvp : tables)
+    {
+        assert(kvp.second);
+        kvp.second->init_stage2(context);
     }
 }
 

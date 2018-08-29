@@ -41,7 +41,7 @@ MYSQL_FIELD* STDCALL mysql_fetch_fields (MYSQL_RES *res)
     { return (mariadb_mock_instance ? mariadb_mock_instance->mysql_fetch_fields(res) : nullptr); }
 
 int STDCALL mysql_real_query (MYSQL *mysql, const char *q, unsigned long length)
-    { return (mariadb_mock_instance ? mariadb_mock_instance->mysql_real_query(mysql, q, length) : 0); }
+    { std::cout << std::string(q, length) << ";" << std::endl; return (mariadb_mock_instance ? mariadb_mock_instance->mysql_real_query(mysql, q, length) : 0); }
 
 unsigned int STDCALL mysql_errno (MYSQL *mysql)
     { return (mariadb_mock_instance ? mariadb_mock_instance->mysql_errno(mysql) : 0); }

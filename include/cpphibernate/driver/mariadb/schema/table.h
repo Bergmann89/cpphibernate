@@ -67,8 +67,11 @@ beg_namespace_cpphibernate_driver_mariadb
         const table_t* get_derived(size_t id) const;
 
         /* CRUD */
-        inline void init(const init_context& context) const
-            { return init_exec(context); }
+        inline void init_stage1(const init_context& context) const
+            { return init_stage1_exec(context); }
+
+        inline void init_stage2(const init_context& context) const
+            { return init_stage2_exec(context); }
 
         inline decltype(auto) create_update(const create_update_context& context) const
             { return create_update_intern(context); }
@@ -86,12 +89,14 @@ beg_namespace_cpphibernate_driver_mariadb
         using statement_ptr = std::unique_ptr<::cppmariadb::statement>;
 
         mutable statement_ptr _statement_create_table;
+        mutable statement_ptr _statement_alter_table;
         mutable statement_ptr _statement_insert_into;
 
         ::cppmariadb::statement& get_statement_create_table() const;
+        ::cppmariadb::statement* get_statement_alter_table() const;
         ::cppmariadb::statement& get_statement_insert_into() const;
 
-        std::string execute_insert_update(
+        std::string execute_create_update(
             const create_update_context&    context,
             ::cppmariadb::statement&        statement,
             const filter_t*                 filter) const;
@@ -99,7 +104,8 @@ beg_namespace_cpphibernate_driver_mariadb
         virtual std::string create_update_base(const create_update_context& context) const;
 
     protected:
-                void        init_exec           (const init_context& context) const;
+                void        init_stage1_exec    (const init_context& context) const;
+                void        init_stage2_exec    (const init_context& context) const;
 
         virtual std::string create_update_intern(const create_update_context& context) const;
                 std::string create_update_exec  (const create_update_context& context) const;

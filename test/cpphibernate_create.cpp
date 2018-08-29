@@ -6,19 +6,19 @@
 
 using namespace ::testing;
 using namespace ::cpphibernate;
-/*
+
 TEST(CppHibernateTests, create_test1)
 {
     StrictMock<mariadb_mock> mock;
 
     expect_query(mock,  "START TRANSACTION");
     expect_query(mock,  "SELECT Uuid()", result_used({
-                            { "02689aa7-aa28-11e8-bf41-0242ac110002" }
+                            { "3d12697a-abb9-11e8-98d0-529269fb1459" }
                         }));
     expect_query(mock,  "INSERT INTO "
                             "`tbl_test1` "
                         "SET "
-                            "`tbl_test1_id`=UuidToBin('X02689aa7-aa28-11e8-bf41-0242ac110002X'), "
+                            "`tbl_test1_id`=UuidToBin('X3d12697a-abb9-11e8-98d0-529269fb1459X'), "
                             "`str_data`='Xstr_data of class `test1` object `t1`X', "
                             "`str64_data`='Xstr64_data of class `test1` object `t1`X', "
                             "`u32_nullable`=null, "
@@ -55,12 +55,12 @@ TEST(CppHibernateTests, create_test2)
 
     expect_query(mock,  "START TRANSACTION");
     expect_query(mock,  "SELECT Uuid()", result_used({
-                            { "02689aa7-aa28-11e8-bf41-0242ac110002" }
+                            { "3d1270dc-abb9-11e8-98d0-529269fb1459" }
                         }));
     expect_query(mock,  "INSERT INTO "
                             "`tbl_test2` "
                         "SET "
-                            "`tbl_test2_id`=UuidToBin('X02689aa7-aa28-11e8-bf41-0242ac110002X'), "
+                            "`tbl_test2_id`=UuidToBin('X3d1270dc-abb9-11e8-98d0-529269fb1459X'), "
                             "`u8_data`='X1X', "
                             "`i8_data`='X2X', "
                             "`u16_data`='X3X', "
@@ -96,12 +96,12 @@ TEST(CppHibernateTests, create_test3)
 
     expect_query(mock,  "START TRANSACTION");
     expect_query(mock,  "SELECT Uuid()", result_used({
-                            { "02689aa7-aa28-11e8-bf41-0242ac110002" }
+                            { "3d12737a-abb9-11e8-98d0-529269fb1459" }
                         }));
     expect_query(mock,  "INSERT INTO "
                             "`tbl_test3` "
                         "SET "
-                            "`tbl_test3_id`=UuidToBin('X02689aa7-aa28-11e8-bf41-0242ac110002X'), "
+                            "`tbl_test3_id`=UuidToBin('X3d12737a-abb9-11e8-98d0-529269fb1459X'), "
                             "`tbl_derived3_id_test3_list`=UuidToBin(null), "
                             "`tbl_derived3_id_test3_vector`=UuidToBin(null), "
                             "`u32_data`='X5X', "
@@ -139,25 +139,25 @@ TEST(CppHibernateTests, create_derived1)
 
     expect_query(mock,  "START TRANSACTION");
     expect_query(mock,  "SELECT Uuid()", result_used({
-                            { "02689aa7-aa28-11e8-bf41-0242ac110002" }
+                            { "3d12758c-abb9-11e8-98d0-529269fb1459" }
                         }));
     expect_query(mock,  "SELECT Uuid()", result_used({
-                            { "a572edde-aadb-11e8-98d0-529269fb1459" }
+                            { "3d12778a-abb9-11e8-98d0-529269fb1459" }
                         }));
     expect_query(mock,  "INSERT INTO "
                             "`tbl_base` "
                         "SET "
-                            "`tbl_base_id`=UuidToBin('Xa572edde-aadb-11e8-98d0-529269fb1459X'), "
+                            "`tbl_base_id`=UuidToBin('X3d12778a-abb9-11e8-98d0-529269fb1459X'), "
                             "`name`='Xderived1X', "
                             "`__type`='X11X'",
                         result_affected_rows(1));
     expect_query(mock,  "SELECT Uuid()", result_used({
-                            { "b80ffb20-aae6-11e8-98d0-529269fb1459" }
+                            { "3d127988-abb9-11e8-98d0-529269fb1459" }
                         }));
     expect_query(mock,  "INSERT INTO "
                             "`tbl_test1` "
                         "SET "
-                            "`tbl_test1_id`=UuidToBin('Xb80ffb20-aae6-11e8-98d0-529269fb1459X'), "
+                            "`tbl_test1_id`=UuidToBin('X3d127988-abb9-11e8-98d0-529269fb1459X'), "
                             "`str_data`='Xstr_data of class `test1` object `d1.test1_data`X', "
                             "`str64_data`='Xstr64_data of class `test1` object `d1.test1_data`X', "
                             "`u32_nullable`='X32X', "
@@ -167,9 +167,9 @@ TEST(CppHibernateTests, create_derived1)
     expect_query(mock,  "INSERT INTO "
                             "`tbl_derived1` "
                         "SET "
-                            "`tbl_derived1_id`=UuidToBin('X02689aa7-aa28-11e8-bf41-0242ac110002X'), "
-                            "`tbl_base_id`=UuidToBin('Xa572edde-aadb-11e8-98d0-529269fb1459X'), "
-                            "`tbl_test1_id_test1_data`=UuidToBin('Xb80ffb20-aae6-11e8-98d0-529269fb1459X'), "
+                            "`tbl_derived1_id`=UuidToBin('X3d12758c-abb9-11e8-98d0-529269fb1459X'), "
+                            "`tbl_base_id`=UuidToBin('X3d12778a-abb9-11e8-98d0-529269fb1459X'), "
+                            "`tbl_test1_id_test1_data`=UuidToBin('X3d127988-abb9-11e8-98d0-529269fb1459X'), "
                             "`enum_data`='Xtest2X'",
                         result_affected_rows(1));
     expect_query(mock,  "COMMIT");
@@ -204,37 +204,37 @@ TEST(CppHibernateTests, create_derived2)
 
     expect_query(mock,  "START TRANSACTION");
     expect_query(mock,  "SELECT Uuid()", result_used({
-                            { "02689aa7-aa28-11e8-bf41-0242ac110002" }
+                            { "3d127bcc-abb9-11e8-98d0-529269fb1459" }
                         }));
     expect_query(mock,  "SELECT Uuid()", result_used({
-                            { "a572edde-aadb-11e8-98d0-529269fb1459" }
+                            { "3d127db6-abb9-11e8-98d0-529269fb1459" }
                         }));
     expect_query(mock,  "INSERT INTO "
                             "`tbl_base` "
                         "SET "
-                            "`tbl_base_id`=UuidToBin('Xa572edde-aadb-11e8-98d0-529269fb1459X'), "
+                            "`tbl_base_id`=UuidToBin('X3d127db6-abb9-11e8-98d0-529269fb1459X'), "
                             "`name`='Xderived2X', "
                             "`__type`='X12X'",
                         result_affected_rows(1));
     expect_query(mock,  "SELECT Uuid()", result_used({
-                            { "b80ffb20-aae6-11e8-98d0-529269fb1459" }
+                            { "3d1283a6-abb9-11e8-98d0-529269fb1459" }
                         }));
     expect_query(mock,  "INSERT INTO "
                             "`tbl_test2` "
                         "SET "
-                            "`tbl_test2_id`=UuidToBin('Xb80ffb20-aae6-11e8-98d0-529269fb1459X'), "
+                            "`tbl_test2_id`=UuidToBin('X3d1283a6-abb9-11e8-98d0-529269fb1459X'), "
                             "`u8_data`='X10X', "
                             "`i8_data`='X11X', "
                             "`u16_data`='X12X', "
                             "`i16_data`='X13X'",
                         result_affected_rows(1));
     expect_query(mock,  "SELECT Uuid()", result_used({
-                            { "9470a0be-aae8-11e8-a137-529269fb1459" }
+                            { "3d128522-abb9-11e8-98d0-529269fb1459" }
                         }));
     expect_query(mock,  "INSERT INTO "
                             "`tbl_test2` "
                         "SET "
-                            "`tbl_test2_id`=UuidToBin('X9470a0be-aae8-11e8-a137-529269fb1459X'), "
+                            "`tbl_test2_id`=UuidToBin('X3d128522-abb9-11e8-98d0-529269fb1459X'), "
                             "`u8_data`='X20X', "
                             "`i8_data`='X21X', "
                             "`u16_data`='X22X', "
@@ -243,10 +243,10 @@ TEST(CppHibernateTests, create_derived2)
     expect_query(mock,  "INSERT INTO "
                             "`tbl_derived2` "
                         "SET "
-                            "`tbl_derived2_id`=UuidToBin('X02689aa7-aa28-11e8-bf41-0242ac110002X'), "
-                            "`tbl_base_id`=UuidToBin('Xa572edde-aadb-11e8-98d0-529269fb1459X'), "
-                            "`tbl_test2_id_test2_nullable`=UuidToBin('Xb80ffb20-aae6-11e8-98d0-529269fb1459X'), "
-                            "`tbl_test2_id_test2_ptr_u`=UuidToBin('X9470a0be-aae8-11e8-a137-529269fb1459X'), "
+                            "`tbl_derived2_id`=UuidToBin('X3d127bcc-abb9-11e8-98d0-529269fb1459X'), "
+                            "`tbl_base_id`=UuidToBin('X3d127db6-abb9-11e8-98d0-529269fb1459X'), "
+                            "`tbl_test2_id_test2_nullable`=UuidToBin('X3d1283a6-abb9-11e8-98d0-529269fb1459X'), "
+                            "`tbl_test2_id_test2_ptr_u`=UuidToBin('X3d128522-abb9-11e8-98d0-529269fb1459X'), "
                             "`tbl_test2_id_test2_ptr_s`=UuidToBin(null)",
                         result_affected_rows(1));
     expect_query(mock,  "COMMIT");
@@ -279,33 +279,33 @@ TEST(CppHibernateTests, create_derived2)
     auto context = make_context<driver::mariadb>(test_schema, connection);
     context.create(static_cast<base&>(d2));
 }
-*/
+
 TEST(CppHibernateTests, create_derived3)
 {
     StrictMock<mariadb_mock> mock;
 
     expect_query(mock,  "START TRANSACTION");
     expect_query(mock,  "SELECT Uuid()", result_used({
-                            { "02689aa7-aa28-11e8-bf41-0242ac110002" }
+                            { "3d12866c-abb9-11e8-98d0-529269fb1459" }
                         }));
     expect_query(mock,  "SELECT Uuid()", result_used({
-                            { "df032510-aae9-11e8-98d0-529269fb1459" }
+                            { "3d1287a2-abb9-11e8-98d0-529269fb1459" }
                         }));
     expect_query(mock,  "SELECT Uuid()", result_used({
-                            { "a572edde-aadb-11e8-98d0-529269fb1459" }
+                            { "3d1288ce-abb9-11e8-98d0-529269fb1459" }
                         }));
     expect_query(mock,  "INSERT INTO "
                             "`tbl_base` "
                         "SET "
-                            "`tbl_base_id`=UuidToBin('Xa572edde-aadb-11e8-98d0-529269fb1459X'), "
+                            "`tbl_base_id`=UuidToBin('X3d1288ce-abb9-11e8-98d0-529269fb1459X'), "
                             "`name`='Xderived3X', "
                             "`__type`='X13X'",
                         result_affected_rows(1));
     expect_query(mock,  "INSERT INTO "
                             "`tbl_derived2` "
                         "SET "
-                            "`tbl_derived2_id`=UuidToBin('Xdf032510-aae9-11e8-98d0-529269fb1459X'), "
-                            "`tbl_base_id`=UuidToBin('Xa572edde-aadb-11e8-98d0-529269fb1459X'), "
+                            "`tbl_derived2_id`=UuidToBin('X3d1287a2-abb9-11e8-98d0-529269fb1459X'), "
+                            "`tbl_base_id`=UuidToBin('X3d1288ce-abb9-11e8-98d0-529269fb1459X'), "
                             "`tbl_test2_id_test2_nullable`=UuidToBin(null), "
                             "`tbl_test2_id_test2_ptr_u`=UuidToBin(null), "
                             "`tbl_test2_id_test2_ptr_s`=UuidToBin(null)",
@@ -313,18 +313,18 @@ TEST(CppHibernateTests, create_derived3)
     expect_query(mock,  "INSERT INTO "
                             "`tbl_derived3` "
                         "SET "
-                            "`tbl_derived3_id`=UuidToBin('X02689aa7-aa28-11e8-bf41-0242ac110002X'), "
-                            "`tbl_derived2_id`=UuidToBin('Xdf032510-aae9-11e8-98d0-529269fb1459X')",
+                            "`tbl_derived3_id`=UuidToBin('X3d12866c-abb9-11e8-98d0-529269fb1459X'), "
+                            "`tbl_derived2_id`=UuidToBin('X3d1287a2-abb9-11e8-98d0-529269fb1459X')",
                         result_affected_rows(1));
 
     expect_query(mock,  "SELECT Uuid()", result_used({
-                            { "be0baad8-aaeb-11e8-a137-529269fb1459" }
+                            { "3d1289f0-abb9-11e8-98d0-529269fb1459" }
                         }));
     expect_query(mock,  "INSERT INTO "
                             "`tbl_test3` "
                         "SET "
-                            "`tbl_test3_id`=UuidToBin('Xbe0baad8-aaeb-11e8-a137-529269fb1459X'), "
-                            "`tbl_derived3_id_test3_list`=UuidToBin('X02689aa7-aa28-11e8-bf41-0242ac110002X'), "
+                            "`tbl_test3_id`=UuidToBin('X3d1289f0-abb9-11e8-98d0-529269fb1459X'), "
+                            "`tbl_derived3_id_test3_list`=UuidToBin('X3d12866c-abb9-11e8-98d0-529269fb1459X'), "
                             "`tbl_derived3_id_test3_vector`=UuidToBin(null), "
                             "`u32_data`='X100X', "
                             "`i32_data`='X101X', "
@@ -333,13 +333,13 @@ TEST(CppHibernateTests, create_derived3)
                         result_affected_rows(1));
 
     expect_query(mock,  "SELECT Uuid()", result_used({
-                            { "be0bb3e8-aaeb-11e8-a137-529269fb1459" }
+                            { "3d128b26-abb9-11e8-98d0-529269fb1459" }
                         }));
     expect_query(mock,  "INSERT INTO "
                             "`tbl_test3` "
                         "SET "
-                            "`tbl_test3_id`=UuidToBin('Xbe0bb3e8-aaeb-11e8-a137-529269fb1459X'), "
-                            "`tbl_derived3_id_test3_list`=UuidToBin('X02689aa7-aa28-11e8-bf41-0242ac110002X'), "
+                            "`tbl_test3_id`=UuidToBin('X3d128b26-abb9-11e8-98d0-529269fb1459X'), "
+                            "`tbl_derived3_id_test3_list`=UuidToBin('X3d12866c-abb9-11e8-98d0-529269fb1459X'), "
                             "`tbl_derived3_id_test3_vector`=UuidToBin(null), "
                             "`u32_data`='X110X', "
                             "`i32_data`='X111X', "
@@ -348,14 +348,14 @@ TEST(CppHibernateTests, create_derived3)
                         result_affected_rows(1));
 
     expect_query(mock,  "SELECT Uuid()", result_used({
-                            { "be0bb974-aaeb-11e8-a137-529269fb1459" }
+                            { "3d128eb4-abb9-11e8-98d0-529269fb1459" }
                         }));
     expect_query(mock,  "INSERT INTO "
                             "`tbl_test3` "
                         "SET "
-                            "`tbl_test3_id`=UuidToBin('Xbe0bb974-aaeb-11e8-a137-529269fb1459X'), "
+                            "`tbl_test3_id`=UuidToBin('X3d128eb4-abb9-11e8-98d0-529269fb1459X'), "
                             "`tbl_derived3_id_test3_list`=UuidToBin(null), "
-                            "`tbl_derived3_id_test3_vector`=UuidToBin('X02689aa7-aa28-11e8-bf41-0242ac110002X'), "
+                            "`tbl_derived3_id_test3_vector`=UuidToBin('X3d12866c-abb9-11e8-98d0-529269fb1459X'), "
                             "`u32_data`='X120X', "
                             "`i32_data`='X121X', "
                             "`u64_data`='X122X', "
@@ -363,14 +363,14 @@ TEST(CppHibernateTests, create_derived3)
                         result_affected_rows(1));
 
     expect_query(mock,  "SELECT Uuid()", result_used({
-                            { "be0bbbc2-aaeb-11e8-a137-529269fb1459" }
+                            { "3d128ffe-abb9-11e8-98d0-529269fb1459" }
                         }));
     expect_query(mock,  "INSERT INTO "
                             "`tbl_test3` "
                         "SET "
-                            "`tbl_test3_id`=UuidToBin('Xbe0bbbc2-aaeb-11e8-a137-529269fb1459X'), "
+                            "`tbl_test3_id`=UuidToBin('X3d128ffe-abb9-11e8-98d0-529269fb1459X'), "
                             "`tbl_derived3_id_test3_list`=UuidToBin(null), "
-                            "`tbl_derived3_id_test3_vector`=UuidToBin('X02689aa7-aa28-11e8-bf41-0242ac110002X'), "
+                            "`tbl_derived3_id_test3_vector`=UuidToBin('X3d12866c-abb9-11e8-98d0-529269fb1459X'), "
                             "`u32_data`='X130X', "
                             "`i32_data`='X131X', "
                             "`u64_data`='X132X', "
@@ -378,14 +378,14 @@ TEST(CppHibernateTests, create_derived3)
                         result_affected_rows(1));
 
     expect_query(mock,  "SELECT Uuid()", result_used({
-                            { "78ee918a-aaec-11e8-98d0-529269fb1459" }
+                            { "3d129134-abb9-11e8-98d0-529269fb1459" }
                         }));
     expect_query(mock,  "INSERT INTO "
                             "`tbl_test3` "
                         "SET "
-                            "`tbl_test3_id`=UuidToBin('X78ee918a-aaec-11e8-98d0-529269fb1459X'), "
+                            "`tbl_test3_id`=UuidToBin('X3d129134-abb9-11e8-98d0-529269fb1459X'), "
                             "`tbl_derived3_id_test3_list`=UuidToBin(null), "
-                            "`tbl_derived3_id_test3_vector`=UuidToBin('X02689aa7-aa28-11e8-bf41-0242ac110002X'), "
+                            "`tbl_derived3_id_test3_vector`=UuidToBin('X3d12866c-abb9-11e8-98d0-529269fb1459X'), "
                             "`u32_data`='X140X', "
                             "`i32_data`='X141X', "
                             "`u64_data`='X142X', "
