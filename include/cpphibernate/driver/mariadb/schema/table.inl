@@ -150,7 +150,10 @@ beg_namespace_cpphibernate_driver_mariadb
                                                             std::declval<T_table>().wrapped_dataset))>;
                 using wrapped_dataset_type          = typename mp::decay_t<T_table>::wrapped_dataset_type;
                 using dataset_type                  = misc::unwrap_t<wrapped_dataset_type>;
+                using real_dataset_type             = misc::real_dataset_t<dataset_type>;
                 using table_type                    = table_type_t<dataset_type, base_type>;
+
+                static_assert(mp::is_same<dataset_type, real_dataset_type>::value, "table cn only be created for simple dataset types (not for containers)!");
 
                 table_type ret(schema, table);
                 ret.dataset_id          = misc::get_type_id(table.wrapped_dataset);

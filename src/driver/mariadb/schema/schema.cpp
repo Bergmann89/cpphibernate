@@ -13,7 +13,7 @@ using namespace ::cpphibernate::driver::mariadb_impl;
 
 void schema_t::update()
 {
-// clear everything
+    // clear everything
     for (auto& kvp : tables)
     {
         assert(static_cast<bool>(kvp.second));
@@ -25,6 +25,13 @@ void schema_t::update()
         table.foreign_table_one_fields.clear();
         table.foreign_table_many_fields.clear();
         table.data_fields.clear();
+
+        for (auto& ptr : table.fields)
+        {
+            assert(ptr);
+            auto& field = *ptr;
+            field.update();
+        }
     }
 
     // update references
@@ -54,12 +61,12 @@ void schema_t::update()
             auto& field = *ptr;
 
             // table
-            if (table.dataset_id != field.table_dataset_id)
+            if (table.dataset_id != field.dataset_id)
                 throw misc::hibernate_exception(std::string("dataset id of field '") + field.table_name + '.' + field.field_name + "' does not match!");
             field.table = &table;
 
             // referenced table
-            it = tables.find(field.value_dataset_id);
+            it = tables.find(field.real_value_id);
             auto referenced_table = (it != tables.end()
                 ? it->second.get()
                 : nullptr);
@@ -118,6 +125,23 @@ const table_t& schema_t::table(size_t dataset_id) const
         throw misc::hibernate_exception(std::string("unable to find table for dataset with id ") + std::to_string(dataset_id));
     assert(static_cast<bool>(it->second));
     return *it->second;
+}
+
+const field_t& schema_t::field(size_t field_id) const
+{
+    for (auto& kvp : tables)
+    {
+        assert(kvp.second);
+        auto& table = *kvp.second;
+        for (auto& ptr : table.fields)
+        {
+            assert(ptr);
+            auto& field = *ptr;
+            if (field.id == field_id)
+                return field;
+        }
+    }
+    throw misc::hibernate_exception(std::string("unable to find field with id ") + std::to_string(field_id));
 }
 
 #define exec_query()                                                \

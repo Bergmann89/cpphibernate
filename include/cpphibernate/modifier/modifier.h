@@ -23,7 +23,7 @@ beg_namespace_cpphibernate_modifier
         { };
 
     template<typename... T>
-    struct all_are_modifier
+    struct all_are_modifiers
         : public mp::all_true<is_modifier<T>::value...>
         { };
 

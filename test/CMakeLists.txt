@@ -12,6 +12,7 @@ Set                         ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${PEDANTIC_CXX
 
 Project                     ( test_cpphibernate )
 File                        ( GLOB_RECURSE SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp )
+List                        ( FILTER SOURCE_FILES EXCLUDE REGEX "/_[A-Za-z0-9_-]*\.cpp$" )
 Add_Executable              ( test_cpphibernate EXCLUDE_FROM_ALL ${SOURCE_FILES} )
 Target_Link_Libraries       (
                                 test_cpphibernate

@@ -124,6 +124,7 @@ beg_namespace_cpphibernate_driver_mariadb
         const table_t*  derived_table;
         const field_t*  owner_field;
         std::string     owner_key;
+        ssize_t         index;
 
         template<typename T_data>
         inline create_update_context(
@@ -136,6 +137,7 @@ beg_namespace_cpphibernate_driver_mariadb
             , is_update     (p_is_update)
             , derived_table (nullptr)
             , owner_field   (nullptr)
+            , index         (-1)
             { }
     };
 

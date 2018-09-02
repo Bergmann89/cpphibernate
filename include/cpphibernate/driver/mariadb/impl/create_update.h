@@ -99,11 +99,14 @@ beg_namespace_cpphibernate_driver_mariadb
             auto& dataset    = context.get<dataset_type>();
 
             transaction_lock trans(connection);
+            ssize_t index = 0;
             for (auto& x : dataset)
             {
                 using new_dataset_type            = mp::decay_t<decltype(x)>;
                 using new_create_update_impl_type = create_update_impl_t<new_dataset_type>;
-                new_create_update_impl_type::apply(change_context(context, x), strict);
+                auto new_context = change_context(context, x);
+                new_context.index = index++;
+                new_create_update_impl_type::apply(new_context, strict);
             }
             trans.commit();
             return ret;

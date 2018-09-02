@@ -40,6 +40,15 @@ beg_namespace_cpphibernate_driver_mariadb
             create_update_impl_t<T_dataset>::apply(
                 create_update_context(dataset, _schema, _connection, _filter, false));
         }
+
+        template<typename T_dataset, typename T_modifiers>
+        inline void read_impl(T_dataset& dataset, T_modifiers&& modifiers) const
+        {
+            auto& where = build_where(_schema, modifiers);
+            auto& limit = build_limit(modifiers);
+            std::cout << "WHERE = " << where.query(_connection) << std::endl;
+            std::cout << "LIMIT = " << limit.query(_connection) << std::endl;
+        }
     };
 
 }

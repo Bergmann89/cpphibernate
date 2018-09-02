@@ -211,7 +211,7 @@ beg_namespace_cpphibernate_driver_mariadb
     };
 
     template<typename T>
-    struct type_properties<T, mp::enable_if<misc::is_nullable<mp::clean_type<T>>>>
+    struct type_properties<T, mp::enable_if<misc::is_nullable<mp::decay_t<T>>>>
     {
         using nullable_type         = T;
         using nullable_helper_type  = misc::nullable_helper<nullable_type>;

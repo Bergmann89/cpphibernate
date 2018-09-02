@@ -30,12 +30,12 @@ std::string build_init_stage1_query(const table_t& table)
     {
         assert(table.primary_key_field);
         auto& key_info = *table.primary_key_field;
-        auto  args     = key_info.create_table_arguments();
+        auto  args     = key_info.create_arguments;
         os  <<  indent
             <<  "`"
             <<  key_info.field_name
             <<  "` "
-            <<  key_info.type()
+            <<  key_info.type
             <<  " NOT NULL"
             <<  (args.empty() ? "" : " ")
             <<  args
@@ -52,7 +52,7 @@ std::string build_init_stage1_query(const table_t& table)
             <<  "`"
             <<  key_info.field_name
             <<  "` "
-            <<  key_info.type()
+            <<  key_info.type
             <<  " NOT NULL,";
     }
 
@@ -70,7 +70,7 @@ std::string build_init_stage1_query(const table_t& table)
             <<  "_id_"
             <<  field_info.field_name
             <<  "` "
-            <<  ref_key_info.type()
+            <<  ref_key_info.type
             <<  (field_info.value_is_nullable
                     ? " NULL DEFAULT NULL,"
                     : " NOT NULL,");
@@ -90,8 +90,17 @@ std::string build_init_stage1_query(const table_t& table)
             <<  "_id_"
             <<  field_info.field_name
             <<  "` "
-            <<  ref_key_info.type()
+            <<  ref_key_info.type
             <<  " NULL DEFAULT NULL,";
+        if (field_info.value_is_ordered)
+        {
+            os  <<  indent
+                <<  "`"
+                <<  field_info.table_name
+                <<  "_index_"
+                <<  field_info.field_name
+                <<  "` UNSIGNED INT NOT NULL,";
+        }
     }
 
     /* data fields */
@@ -103,7 +112,7 @@ std::string build_init_stage1_query(const table_t& table)
             <<  "`"
             <<  field_info.field_name
             <<  "` "
-            <<  field_info.type()
+            <<  field_info.type
             <<  (field_info.value_is_nullable
                     ? " NULL DEFAULT NULL,"
                     : " NOT NULL,");
@@ -353,18 +362,18 @@ std::string build_create_update_query(const table_t& table, const filter_t* filt
     {
         assert(table.primary_key_field);
         auto& key_info = *table.primary_key_field;
-        if (!key_info.is_auto_generated())
+        if (!key_info.value_is_auto_incremented)
         {
             if (index++)
                 os << ", ";
             os  <<  "`"
                 <<  key_info.field_name
                 <<  "`="
-                <<  key_info.convert_to_open()
+                <<  key_info.convert_to_open
                 <<  "?"
                 <<  key_info.field_name
                 <<  "?"
-                <<  key_info.convert_to_close();
+                <<  key_info.convert_to_close;
         }
     }
 
@@ -381,11 +390,11 @@ std::string build_create_update_query(const table_t& table, const filter_t* filt
         os  <<  "`"
             <<  key_info.field_name
             <<  "`="
-            <<  key_info.convert_to_open()
+            <<  key_info.convert_to_open
             <<  "?"
             <<  key_info.field_name
             <<  "?"
-            <<  key_info.convert_to_close();
+            <<  key_info.convert_to_close;
     }
 
     /* foreign table one fields */
@@ -405,13 +414,13 @@ std::string build_create_update_query(const table_t& table, const filter_t* filt
             <<  "_id_"
             <<  field_info.field_name
             <<  "`="
-            <<  key_info.convert_to_open()
+            <<  key_info.convert_to_open
             <<  "?"
             <<  key_info.table_name
             <<  "_id_"
             <<  field_info.field_name
             <<  "?"
-            <<  key_info.convert_to_close();
+            <<  key_info.convert_to_close;
     }
 
     /* foreign fields */
@@ -431,13 +440,23 @@ std::string build_create_update_query(const table_t& table, const filter_t* filt
             <<  "_id_"
             <<  field_info.field_name
             <<  "`="
-            <<  key_info.convert_to_open()
+            <<  key_info.convert_to_open
             <<  "?"
             <<  field_info.table_name
             <<  "_id_"
             <<  field_info.field_name
             <<  "?"
-            <<  key_info.convert_to_close();
+            <<  key_info.convert_to_close;
+        if (field_info.value_is_ordered)
+        {
+            if (index++)
+            os << ", ";
+            os  <<  "`"
+                <<  field_info.table_name
+                <<  "_index_"
+                <<  field_info.field_name
+                <<  "`=?\?";
+        }
     }
 
     /* data fields */
@@ -452,11 +471,11 @@ std::string build_create_update_query(const table_t& table, const filter_t* filt
         os  <<  "`"
             <<  field_info.field_name
             <<  "`="
-            <<  field_info.convert_to_open()
+            <<  field_info.convert_to_open
             <<  "?"
             <<  field_info.field_name
             <<  "?"
-            <<  field_info.convert_to_close();
+            <<  field_info.convert_to_close;
     }
 
     /* type field for derived tables */
@@ -476,11 +495,11 @@ std::string build_create_update_query(const table_t& table, const filter_t* filt
         os  <<  " WHERE `"
             <<  key_info.field_name
             <<  "`="
-            <<  key_info.convert_to_open()
+            <<  key_info.convert_to_open
             <<  "?"
             <<  key_info.field_name
             <<  "?"
-            <<  key_info.convert_to_close();
+            <<  key_info.convert_to_close;
     }
 
     return os.str();
@@ -503,7 +522,7 @@ std::string table_t::execute_create_update(
 
     /* primary key */
     assert(primary_key_field);
-    if (   !primary_key_field->is_auto_generated()
+    if (   !primary_key_field->value_is_auto_incremented
         && !is_update)
     {
         primary_key = primary_key_field->generate_value(context.connection);
@@ -550,15 +569,28 @@ std::string table_t::execute_create_update(
         if (is_update && ptr != context.owner_field)
             continue;
 
-        if (    context.owner_field
-            &&  ptr == context.owner_field)
+        auto& field_info = *ptr;
+        bool set_value =
+                context.owner_field
+            &&  ptr == context.owner_field;
+
+        if (set_value)
         {
             assert(!context.owner_key.empty());
             statement.set(index, context.owner_key);
         }
         else
+        {
             statement.set_null(index);
+        }
         ++index;
+
+        if (field_info.value_is_ordered)
+        {
+            if (set_value)  statement.set(index, context.index);
+            else            statement.set(index, 0);
+            ++index;
+        }
     }
 
     /* data fields */
@@ -604,7 +636,7 @@ std::string table_t::execute_create_update(
         cpphibernate_debug_log("execute UPDATE query: " << statement.query(connection));
     }
 
-    if (    primary_key_field->is_auto_generated()
+    if (    primary_key_field->value_is_auto_incremented
         && !is_update)
     {
         auto id = connection.execute_id(statement);

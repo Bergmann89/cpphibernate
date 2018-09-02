@@ -27,6 +27,7 @@ beg_namespace_cpphibernate_driver_mariadb
         void print  (std::ostream& os) const;
 
         const table_t& table(size_t dataset_id) const;
+        const field_t& field(size_t field_id) const;
 
         /* CRUD */
         void init(const init_context& context) const;

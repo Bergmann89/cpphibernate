@@ -6,21 +6,46 @@
 beg_namespace_cpphibernate_driver_mariadb
 {
 
+    /* simple_field_t */
+
+    template<typename T_field>
+    void simple_field_t<T_field>
+        ::update()
+    {
+        base_type::update();
+
+        id              = misc::get_type_id(hana::type_c<field_type>);
+        dataset_id      = misc::get_type_id(hana::type_c<dataset_type>);
+        real_dataset_id = misc::get_type_id(hana::type_c<real_dataset_type>);
+        value_id        = misc::get_type_id(hana::type_c<value_type>);
+        real_value_id   = misc::get_type_id(hana::type_c<real_value_type>);
+
+        value_is_nullable  = misc::is_nullable<value_type>::value;
+        value_is_container = misc::is_container<value_type>::value;
+        value_is_ordered   = misc::is_ordered<value_type>::value;
+    }
+
     /* value_field_t */
 
-    template<typename T_schema, typename T_field>
-    std::string value_field_t<T_schema, T_field>::type() const
-        { return type_props::type(); }
+    template<typename T_field>
+    void value_field_t<T_field>
+        ::update()
+    {
+        base_type::update();
+        this->type = type_props::type();
+    }
 
-    template<typename T_schema, typename T_field>
-    value_t value_field_t<T_schema, T_field>::get(const data_context& context) const
+    template<typename T_field>
+    value_t value_field_t<T_field>
+        ::get(const data_context& context) const
     {
         auto& dataset = context.get<dataset_type>();
         return type_props::convert_from(this->field.getter(dataset));
     }
 
-    template<typename T_schema, typename T_field>
-    void value_field_t<T_schema, T_field>::set(const data_context& context, const value_t& value) const
+    template<typename T_field>
+    void value_field_t<T_field>
+        ::set(const data_context& context, const value_t& value) const
     {
         auto& dataset = context.get<dataset_type>();
         this->field.setter(dataset, type_props::convert_to(value));
@@ -28,12 +53,16 @@ beg_namespace_cpphibernate_driver_mariadb
 
     /* primary_key_field_t */
 
-    template<typename T_schema, typename T_field>
-    std::string primary_key_field_t<T_schema, T_field>::create_table_arguments() const
-        { return key_props::create_table_argument; }
+    template<typename T_field>
+    bool primary_key_field_t<T_field>
+        ::is_default(const data_context& context) const
+    {
+        auto& dataset = context.get<dataset_type>();
+        return key_props::is_default(this->field.getter(dataset));
+    }
 
-    template<typename T_schema, typename T_field>
-    std::string primary_key_field_t<T_schema, T_field>
+    template<typename T_field>
+    std::string primary_key_field_t<T_field>
         ::generate_value(::cppmariadb::connection& connection) const
     {
         auto ret = connection.execute_used(key_props::create_key_query);
@@ -42,37 +71,10 @@ beg_namespace_cpphibernate_driver_mariadb
         return ret->current()->at(0).template get<std::string>();
     }
 
-    template<typename T_schema, typename T_field>
-    bool primary_key_field_t<T_schema, T_field>::is_auto_generated() const
-        { return key_props::auto_generated::value; }
-
-    template<typename T_schema, typename T_field>
-    bool primary_key_field_t<T_schema, T_field>::is_default(const data_context& context) const
-    {
-        auto& dataset = context.get<dataset_type>();
-        return key_props::is_default(this->field.getter(dataset));
-    }
-
-    template<typename T_schema, typename T_field>
-    std::string primary_key_field_t<T_schema, T_field>::convert_to_open() const
-        { return key_props::convert_to_open; }
-
-    template<typename T_schema, typename T_field>
-    std::string primary_key_field_t<T_schema, T_field>::convert_to_close() const
-        { return key_props::convert_to_close; }
-
-    template<typename T_schema, typename T_field>
-    std::string primary_key_field_t<T_schema, T_field>::convert_from_open() const
-        { return key_props::convert_from_open; }
-
-    template<typename T_schema, typename T_field>
-    std::string primary_key_field_t<T_schema, T_field>::convert_from_close() const
-        { return key_props::convert_from_close; }
-
     /* foreign_table_field_t */
 
-    template<typename T_schema, typename T_field>
-    value_t foreign_table_field_t<T_schema, T_field>
+    template<typename T_field>
+    value_t foreign_table_field_t<T_field>
         ::foreign_create_update(const create_update_context& context) const
     {
         auto& dataset       = context.get<dataset_type>();
@@ -114,15 +116,15 @@ beg_namespace_cpphibernate_driver_mariadb
 
         template<typename T_schema, typename T_field, typename = void>
         struct field_type
-            { using type = data_field_t<T_schema, T_field>; };
+            { using type = data_field_t<T_field>; };
 
         template<typename T_schema, typename T_field>
         struct field_type<T_schema, T_field, mp::enable_if<is_primary_key_field<T_field>>>
-            { using type = primary_key_field_t<T_schema, T_field>; };
+            { using type = primary_key_field_t<T_field>; };
 
         template<typename T_schema, typename T_field>
         struct field_type<T_schema, T_field, mp::enable_if<is_foreign_table_field<T_schema, T_field>>>
-            { using type = foreign_table_field_t<T_schema, T_field>; };
+            { using type = foreign_table_field_t<T_field>; };
 
         template<typename T_schema, typename T_field>
         using field_type_t = typename field_type<T_schema, T_field>::type;
@@ -149,17 +151,9 @@ beg_namespace_cpphibernate_driver_mariadb
             {
                 using schema_type           = mp::decay_t<T_schema>;
                 using field_type            = mp::decay_t<T_field>;
-                using getter_type           = mp::decay_t<typename field_type::getter_type>;
-                using value_type            = mp::decay_t<typename getter_type::value_type>;
-                using dataset_type          = mp::decay_t<typename getter_type::dataset_type>;
-                using value_dataset_type    = misc::real_dataset_t<value_type>;
                 using return_type           = field_type_t<schema_type, field_type>;
-                using primary_key_type      = primary_key_field_t<schema_type, field_type>;
-                return_type ret(schema, field);
-                ret.table_dataset_id   = misc::get_type_id(hana::type_c<dataset_type>);
-                ret.value_dataset_id   = misc::get_type_id(hana::type_c<value_dataset_type>);
-                ret.value_is_nullable  = misc::is_nullable<value_type>::value;
-                ret.value_is_container = misc::is_container<value_type>::value;
+                using primary_key_type      = primary_key_field_t<field_type>;
+                return_type ret(field);
                 ret.schema_name        = schema.name;
                 ret.table_name         = table.name;
                 ret.field_name         = field.name;

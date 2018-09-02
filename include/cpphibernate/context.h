@@ -53,13 +53,14 @@ beg_namespace_cpphibernate
             template<typename T_dataset, typename... T_modifiers>
             constexpr auto read(T_dataset& dataset, T_modifiers&&... modifiers)
                 -> mp::enable_if<
-                    modifier::all_are_modifier<mp::decay_t<T_modifiers>...>>
+                    modifier::all_are_modifiers<mp::decay_t<T_modifiers>...>>
             {
+                using namespace modifier;
                 using real_dataset_type = misc::real_dataset_t<mp::decay_t<T_dataset>>;
                 schema::tables::find(_schema.tables, hana::type_c<real_dataset_type>);
-                this->read_impl(dataset, hana::make_tuple(std::forward<T_modifiers>(modifiers)...));
+                this->read_impl(dataset, modifier::make_list(std::forward<T_modifiers>(modifiers)...));
             }
-            
+
             template<typename T_dataset>
             constexpr auto read(T_dataset& dataset)
                 -> mp::enable_if_c<
@@ -70,7 +71,7 @@ beg_namespace_cpphibernate
                 using real_dataset_type = misc::real_dataset_t<mp::decay_t<T_dataset>>;
                 auto& table         = schema::tables::find(_schema.tables, hana::type_c<real_dataset_type>);
                 auto& primary_key   = schema::table::get_primary_key_field(table);
-                this->read_impl(dataset, hana::make_tuple(where(equal(primary_key, primary_key.getter(dataset)))));
+                this->read_impl(dataset, modifier::make_list(where(equal(primary_key, primary_key.getter(dataset)))));
             }
 
             template<typename T_dataset>
@@ -82,7 +83,7 @@ beg_namespace_cpphibernate
                 using namespace modifier;
                 using real_dataset_type = misc::real_dataset_t<mp::decay_t<T_dataset>>;
                 schema::tables::find(_schema.tables, hana::type_c<real_dataset_type>);
-                this->read_impl(dataset, hana::make_tuple());
+                this->read_impl(dataset, modifier::make_list());
             }
 
             /* update */

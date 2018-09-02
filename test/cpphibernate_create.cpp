@@ -103,7 +103,9 @@ TEST(CppHibernateTests, create_test3)
                         "SET "
                             "`tbl_test3_id`=UuidToBin('X3d12737a-abb9-11e8-98d0-529269fb1459X'), "
                             "`tbl_derived3_id_test3_list`=UuidToBin(null), "
+                            "`tbl_derived3_index_test3_list`='X0X', "
                             "`tbl_derived3_id_test3_vector`=UuidToBin(null), "
+                            "`tbl_derived3_index_test3_vector`='X0X', "
                             "`u32_data`='X5X', "
                             "`i32_data`='X6X', "
                             "`u64_data`='X7X', "
@@ -325,7 +327,9 @@ TEST(CppHibernateTests, create_derived3)
                         "SET "
                             "`tbl_test3_id`=UuidToBin('X3d1289f0-abb9-11e8-98d0-529269fb1459X'), "
                             "`tbl_derived3_id_test3_list`=UuidToBin('X3d12866c-abb9-11e8-98d0-529269fb1459X'), "
+                            "`tbl_derived3_index_test3_list`='X0X', "
                             "`tbl_derived3_id_test3_vector`=UuidToBin(null), "
+                            "`tbl_derived3_index_test3_vector`='X0X', "
                             "`u32_data`='X100X', "
                             "`i32_data`='X101X', "
                             "`u64_data`='X102X', "
@@ -340,7 +344,9 @@ TEST(CppHibernateTests, create_derived3)
                         "SET "
                             "`tbl_test3_id`=UuidToBin('X3d128b26-abb9-11e8-98d0-529269fb1459X'), "
                             "`tbl_derived3_id_test3_list`=UuidToBin('X3d12866c-abb9-11e8-98d0-529269fb1459X'), "
+                            "`tbl_derived3_index_test3_list`='X1X', "
                             "`tbl_derived3_id_test3_vector`=UuidToBin(null), "
+                            "`tbl_derived3_index_test3_vector`='X0X', "
                             "`u32_data`='X110X', "
                             "`i32_data`='X111X', "
                             "`u64_data`='X112X', "
@@ -355,11 +361,13 @@ TEST(CppHibernateTests, create_derived3)
                         "SET "
                             "`tbl_test3_id`=UuidToBin('X3d128eb4-abb9-11e8-98d0-529269fb1459X'), "
                             "`tbl_derived3_id_test3_list`=UuidToBin(null), "
+                            "`tbl_derived3_index_test3_list`='X0X', "
                             "`tbl_derived3_id_test3_vector`=UuidToBin('X3d12866c-abb9-11e8-98d0-529269fb1459X'), "
-                            "`u32_data`='X120X', "
-                            "`i32_data`='X121X', "
-                            "`u64_data`='X122X', "
-                            "`i64_data`='X123X'",
+                            "`tbl_derived3_index_test3_vector`='X0X', "
+                            "`u32_data`='X200X', "
+                            "`i32_data`='X201X', "
+                            "`u64_data`='X202X', "
+                            "`i64_data`='X203X'",
                         result_affected_rows(1));
 
     expect_query(mock,  "SELECT Uuid()", result_used({
@@ -370,11 +378,13 @@ TEST(CppHibernateTests, create_derived3)
                         "SET "
                             "`tbl_test3_id`=UuidToBin('X3d128ffe-abb9-11e8-98d0-529269fb1459X'), "
                             "`tbl_derived3_id_test3_list`=UuidToBin(null), "
+                            "`tbl_derived3_index_test3_list`='X0X', "
                             "`tbl_derived3_id_test3_vector`=UuidToBin('X3d12866c-abb9-11e8-98d0-529269fb1459X'), "
-                            "`u32_data`='X130X', "
-                            "`i32_data`='X131X', "
-                            "`u64_data`='X132X', "
-                            "`i64_data`='X133X'",
+                            "`tbl_derived3_index_test3_vector`='X1X', "
+                            "`u32_data`='X210X', "
+                            "`i32_data`='X211X', "
+                            "`u64_data`='X212X', "
+                            "`i64_data`='X213X'",
                         result_affected_rows(1));
 
     expect_query(mock,  "SELECT Uuid()", result_used({
@@ -385,11 +395,13 @@ TEST(CppHibernateTests, create_derived3)
                         "SET "
                             "`tbl_test3_id`=UuidToBin('X3d129134-abb9-11e8-98d0-529269fb1459X'), "
                             "`tbl_derived3_id_test3_list`=UuidToBin(null), "
+                            "`tbl_derived3_index_test3_list`='X0X', "
                             "`tbl_derived3_id_test3_vector`=UuidToBin('X3d12866c-abb9-11e8-98d0-529269fb1459X'), "
-                            "`u32_data`='X140X', "
-                            "`i32_data`='X141X', "
-                            "`u64_data`='X142X', "
-                            "`i64_data`='X143X'",
+                            "`tbl_derived3_index_test3_vector`='X2X', "
+                            "`u32_data`='X220X', "
+                            "`i32_data`='X221X', "
+                            "`u64_data`='X222X', "
+                            "`i64_data`='X223X'",
                         result_affected_rows(1));
 
     expect_query(mock,  "COMMIT");
@@ -418,20 +430,20 @@ TEST(CppHibernateTests, create_derived3)
     d3.test3_list.back().u64_data = 112;
     d3.test3_list.back().i64_data = 113;
     d3.test3_vector.emplace_back();
-    d3.test3_vector.back().u32_data = 120;
-    d3.test3_vector.back().i32_data = 121;
-    d3.test3_vector.back().u64_data = 122;
-    d3.test3_vector.back().i64_data = 123;
+    d3.test3_vector.back().u32_data = 200;
+    d3.test3_vector.back().i32_data = 201;
+    d3.test3_vector.back().u64_data = 202;
+    d3.test3_vector.back().i64_data = 203;
     d3.test3_vector.emplace_back();
-    d3.test3_vector.back().u32_data = 130;
-    d3.test3_vector.back().i32_data = 131;
-    d3.test3_vector.back().u64_data = 132;
-    d3.test3_vector.back().i64_data = 133;
+    d3.test3_vector.back().u32_data = 210;
+    d3.test3_vector.back().i32_data = 211;
+    d3.test3_vector.back().u64_data = 212;
+    d3.test3_vector.back().i64_data = 213;
     d3.test3_vector.emplace_back();
-    d3.test3_vector.back().u32_data = 140;
-    d3.test3_vector.back().i32_data = 141;
-    d3.test3_vector.back().u64_data = 142;
-    d3.test3_vector.back().i64_data = 143;
+    d3.test3_vector.back().u32_data = 220;
+    d3.test3_vector.back().i32_data = 221;
+    d3.test3_vector.back().u64_data = 222;
+    d3.test3_vector.back().i64_data = 223;
 
     ::cppmariadb::connection connection(reinterpret_cast<MYSQL*>(0x1111));
     auto context = make_context<driver::mariadb>(test_schema, connection);
