@@ -32,7 +32,7 @@ beg_namespace_cpphibernate_modifier
         struct where_builder
         {
             template<typename... T_args>
-            static constexpr decltype(auto) apply(T_args&... args)
+            static constexpr decltype(auto) apply(T_args&&... args)
                 { static_assert(sizeof...(args) == -1, "Invalid parameters for hibernate::modifier::where(...)!"); }
         };
 
@@ -48,7 +48,7 @@ beg_namespace_cpphibernate_modifier
     /* meta */
 
     template<typename T>
-    struct is_where_modifier
+    struct is_where
         : public mp::is_specialization_of<T, __impl::where_t>
         { };
 

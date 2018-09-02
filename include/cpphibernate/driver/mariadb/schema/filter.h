@@ -16,12 +16,15 @@ beg_namespace_cpphibernate_driver_mariadb
         using field_set_type = std::set<const field_t*>;
         using table_set_type = std::set<const table_t*>;
 
-        size_t          cache_id;
+        size_t          cache_id { 0 };
         field_set_type  fields;
         table_set_type  tables;
 
-        bool contains(const table_t* table, bool check_base) const;
-        bool contains(const field_t* field) const;
+        inline bool is_excluded(const table_t& table) const
+            { return tables.count(&table); }
+
+        inline bool is_excluded(const field_t& field) const
+            { return fields.count(&field); }
     };
 
 }

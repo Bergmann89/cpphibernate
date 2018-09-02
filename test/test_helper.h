@@ -24,7 +24,7 @@ ACTION(EscapeString)
 struct result_data
     : public mariadb_mock_item
 {
-    using row_type  = std::vector<std::string>;
+    using row_type  = std::vector<const char *>;
     using data_type = std::vector<row_type>;
 
     struct internal_data_t
@@ -55,8 +55,8 @@ struct result_data
             for (size_t j = 0; j < d.size(); ++j)
             {
                 auto& str = d.at(j);
-                intern.data[j]   = const_cast<char*>(str.c_str());
-                intern.length[j] = static_cast<unsigned long>(str.size());
+                intern.data[j]   = const_cast<char*>(str);
+                intern.length[j] = static_cast<unsigned long>(str ? strlen(str) : 0);
             }
         }
     }

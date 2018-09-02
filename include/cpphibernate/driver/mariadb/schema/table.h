@@ -76,8 +76,8 @@ beg_namespace_cpphibernate_driver_mariadb
         inline decltype(auto) create_update(const create_update_context& context) const
             { return create_update_intern(context); }
 
-        inline void read() const
-            {  }
+        inline void read(const read_context& context) const
+            { return read_exec(context); }
 
     private:
         template<typename T_schema, typename T_table, typename T_base_dataset>
@@ -87,14 +87,18 @@ beg_namespace_cpphibernate_driver_mariadb
         friend struct table_polymorphic_t;
 
         using statement_ptr = std::unique_ptr<::cppmariadb::statement>;
+        using statement_map = std::map<size_t, ::cppmariadb::statement>;
 
         mutable statement_ptr _statement_create_table;
         mutable statement_ptr _statement_alter_table;
         mutable statement_ptr _statement_insert_into;
+        mutable statement_map _statement_select_static;
+        mutable statement_map _statement_select_dynamic;
 
         ::cppmariadb::statement& get_statement_create_table() const;
         ::cppmariadb::statement* get_statement_alter_table() const;
         ::cppmariadb::statement& get_statement_insert_into() const;
+        ::cppmariadb::statement& get_statement_select(const read_context& context) const;
 
         std::string execute_create_update(
             const create_update_context&    context,
@@ -109,6 +113,8 @@ beg_namespace_cpphibernate_driver_mariadb
 
         virtual std::string create_update_intern(const create_update_context& context) const;
                 std::string create_update_exec  (const create_update_context& context) const;
+
+                void        read_exec           (const read_context& context) const;
     };
 
     /* table_simple_t */

@@ -24,7 +24,7 @@ beg_namespace_cpphibernate_driver_mariadb
             mp::list<T_modifier>,
             mp::enable_if_c<
                     modifier::is_limit_modifier<mp::decay_t<T_modifier>>::value
-                ||  modifier::is_offset_modifier<mp::decay_t<T_modifier>>::value>>
+                ||  modifier::is_offset<mp::decay_t<T_modifier>>::value>>
         {
             static constexpr decltype(auto) apply(T_modifier&&)
                 { return T_modifier { }; }

@@ -12,6 +12,173 @@
 using namespace ::utl;
 using namespace ::cpphibernate::driver::mariadb_impl;
 
+/* data_extractor_t */
+
+struct data_extractor_t
+{
+    const table_t&              _table;
+    const read_context&         _context;
+    const ::cppmariadb::row&    _row;
+
+    mutable size_t              _index;
+
+    data_extractor_t(
+        const table_t&              p_table,
+        const read_context&         p_context,
+        const ::cppmariadb::row&    p_row)
+        : _table        (p_table)
+        , _context      (p_context)
+        , _row          (p_row)
+        { }
+
+    inline value_t get_value() const
+    {
+        value_t ret;
+        auto f = _row.at(_index);
+        if (!f.is_null())
+            ret = f.get<std::string>();
+        return ret;
+    }
+
+    inline void read_field(const field_t& field) const
+    {
+        field.set(_context, get_value());
+        ++_index;
+    }
+
+    inline void read_table(const table_t& table) const
+    {
+        if (table.base_table)
+            read_table(*table.base_table);
+
+        if (_context.filter.is_excluded(table))
+            return;
+
+        /* primary key */
+        assert(table.primary_key_field);
+        read_field(*table.primary_key_field);
+
+        /* data fields */
+        for (auto& ptr : table.data_fields)
+        {
+            assert(ptr);
+            auto& field = *ptr;
+            if (!_context.filter.is_excluded(field))
+                read_field(field);
+        }
+    }
+
+    inline void operator()() const
+    {
+        _index = 0;
+        _context.emplace();
+        read_table(_table);
+    }
+};
+
+/* select_query_builder_t */
+
+struct select_query_builder_t
+{
+    const table_t&      _table;
+    const filter_t&     _filter;
+    bool                _is_dynamic;
+
+    size_t              index { 0 };
+    std::ostringstream  os;
+    std::ostringstream  join;
+
+    select_query_builder_t(
+        const table_t&  p_table,
+        const filter_t& p_filter,
+        bool            p_is_dynamic)
+        : _table     (p_table)
+        , _filter    (p_filter)
+        , _is_dynamic(p_is_dynamic)
+        { }
+
+    inline void add_field(const field_t& field)
+    {
+        if (index++) os << ", ";
+        os  <<  "`"
+            <<  field.table_name
+            <<  "`.`"
+            <<  field.field_name
+            <<  "`";
+    }
+
+    inline bool add_table(const table_t& table, const std::string& prefix)
+    {
+        bool ret = false;
+
+        if (table.base_table)
+        {
+            auto tmp = add_table(*table.base_table, "");
+            if (tmp)
+            {
+                assert(table.base_table->primary_key_field);
+                auto& base_key = *table.base_table->primary_key_field;
+                ret = true;
+                join    <<  " LEFT JOIN `"
+                        <<  table.table_name
+                        <<  "` ON `"
+                        <<  table.table_name
+                        <<  "`.`"
+                        <<  base_key.field_name
+                        <<  "`=`"
+                        <<  base_key.table_name
+                        <<  "`.`"
+                        <<  base_key.field_name
+                        <<  "`";
+            }
+        }
+
+        /* __type */
+        if (    _is_dynamic
+            && !table.base_table
+            && !table.derived_tables.empty())
+        {
+            if (index++) os << ", ";
+            os  <<  "`"
+                <<  table.table_name
+                <<  "`.`__type` AS `__type`";
+            ret = true;
+        }
+
+        if (_filter.is_excluded(table))
+            return ret;
+
+        ret = true;
+
+        /* primary key */
+        assert(table.primary_key_field);
+        add_field(*table.primary_key_field);
+
+        /* data fields */
+        for (auto& ptr : table.data_fields)
+        {
+            assert(ptr);
+            auto& field = *ptr;
+            if (!_filter.is_excluded(field))
+                add_field(field);
+        }
+
+        return ret;
+    }
+
+    inline std::string operator()()
+    {
+        os  <<  "SELECT ";
+        add_table(_table, "");
+        os  <<  " FROM `"
+            <<  _table.table_name
+            <<  "`"
+            <<  join.str()
+            <<  " ?where! ?order! ?limit!";
+        return os.str();
+    }
+};
+
 /* build queries */
 
 std::string build_init_stage1_query(const table_t& table)
@@ -380,7 +547,7 @@ std::string build_create_update_query(const table_t& table, const filter_t* filt
     /* base table key fields */
     if (    static_cast<bool>(table.base_table)
         && (   !is_update
-            ||  filter->contains(table.base_table, true)))
+            || !filter->is_excluded(*table.base_table)))
     {
         if (index++)
             os << ", ";
@@ -401,11 +568,11 @@ std::string build_create_update_query(const table_t& table, const filter_t* filt
     for (auto& ptr : table.foreign_table_one_fields)
     {
         assert(static_cast<bool>(ptr));
-        if (is_update && !filter->contains(ptr))
+        auto& field_info = *ptr;
+        if (is_update && filter->is_excluded(field_info))
             continue;
         if (index++)
             os << ", ";
-        auto&  field_info = *ptr;
         assert(field_info.referenced_table);
         assert(field_info.referenced_table->primary_key_field);
         auto&  key_info = *field_info.referenced_table->primary_key_field;
@@ -462,12 +629,12 @@ std::string build_create_update_query(const table_t& table, const filter_t* filt
     /* data fields */
     for (auto& ptr : table.data_fields)
     {
-        if (is_update && !filter->contains(ptr))
+        assert(ptr);
+        auto& field_info = *ptr;
+        if (is_update && filter->is_excluded(field_info))
             continue;
         if (index++)
             os << ", ";
-        assert(static_cast<bool>(ptr));
-        auto&  field_info = *ptr;
         os  <<  "`"
             <<  field_info.field_name
             <<  "`="
@@ -505,6 +672,14 @@ std::string build_create_update_query(const table_t& table, const filter_t* filt
     return os.str();
 }
 
+std::string build_select_query(
+    const table_t& table,
+    const filter_t& filter,
+    bool is_dynamic)
+{
+    return select_query_builder_t(table, filter, is_dynamic)();
+}
+
 /* execute_create_update */
 
 std::string table_t::execute_create_update(
@@ -537,7 +712,7 @@ std::string table_t::execute_create_update(
     /* base_key */
     if (    base_table
         && (   !is_update
-            ||  filter->contains(base_table, true)))
+            || !filter->is_excluded(*base_table)))
     {
         auto new_context = context;
         if (!new_context.derived_table)
@@ -547,14 +722,14 @@ std::string table_t::execute_create_update(
         ++index;
     }
 
-    if (is_update && !filter->contains(this, false))
+    if (is_update && filter->is_excluded(*this))
         return primary_key;
 
     /* foreign table one fields */
     for (auto& ptr : foreign_table_one_fields)
     {
         assert(ptr);
-        if (is_update && !filter->contains(ptr))
+        if (is_update && filter->is_excluded(*ptr))
             continue;
         value_t key = ptr->foreign_create_update(context);
         if (key.has_value())    statement.set(index, std::move(key));
@@ -596,9 +771,9 @@ std::string table_t::execute_create_update(
     /* data fields */
     for (auto& ptr : data_fields)
     {
-        if (is_update && !filter->contains(ptr))
-            continue;
         assert(ptr);
+        if (is_update && filter->is_excluded(*ptr))
+            continue;
 
         auto& field_info = *ptr;
         auto  value      = field_info.get(context);
@@ -654,8 +829,8 @@ std::string table_t::execute_create_update(
     {
         assert(ptr);
         if (    is_update
-            && (   !filter->contains(ptr)
-                || !filter->contains(ptr->referenced_table, true)))
+            && (    filter->is_excluded(*ptr)
+                ||  filter->is_excluded(*ptr->referenced_table)))
             continue;
 
         auto next_context = context;
@@ -750,6 +925,20 @@ const table_t* table_t::get_derived(size_t id) const
     return *_statement_create_table;
 }
 
+::cppmariadb::statement& table_t::get_statement_select(const read_context& context) const
+{
+    auto& map = context.is_dynamic
+        ? _statement_select_dynamic
+        : _statement_select_static;
+    auto it = map.find(context.filter.cache_id);
+    if (it == map.end())
+    {
+        auto query = build_select_query(*this, context.filter, context.is_dynamic);
+        it = map.emplace(context.filter.cache_id, ::cppmariadb::statement(query)).first;
+    }
+    return it->second;
+}
+
 std::string table_t::create_update_base(const create_update_context& context) const
 {
     throw misc::hibernate_exception(static_cast<std::ostringstream&>(std::ostringstream { }
@@ -781,3 +970,18 @@ std::string table_t::create_update_exec(const create_update_context& context) co
 
 std::string table_t::create_update_intern(const create_update_context& context) const
     { return create_update_exec(context); }
+
+void table_t::read_exec(const read_context& context) const
+{
+    auto& statement  = get_statement_select(context);
+    auto& connection = context.connection;
+    cpphibernate_debug_log("execute SELECT query: " << statement.query(connection));
+    auto result = connection.execute_used(statement);
+    if (!result)
+        throw misc::hibernate_exception("Unable to fetching data from database!");
+
+    ::cppmariadb::row* row;
+    while ((row = result->next()))
+        data_extractor_t(*this, context, *row)();
+    context.finish();
+}

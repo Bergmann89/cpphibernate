@@ -22,17 +22,17 @@ beg_namespace_cpphibernate_driver_mariadb
             hana::for_each(modifier, [&limit, &offset](auto& modifier){
                 using modifier_type  = mp::decay_t<decltype(modifier)>;
                 using is_limit_type  = modifier::is_limit_modifier<modifier_type>;
-                using is_offset_type = modifier::is_offset_modifier<modifier_type>;
+                using is_offset_type = modifier::is_offset<modifier_type>;
                 hana::eval_if(
                     is_limit_type { },
                     [&limit, &modifier](auto _){
-                        limit = hana::value(_(modifier).value);
+                        limit = static_cast<ssize_t>(hana::value(_(modifier).value));
                     },
                     [&offset, &modifier](){
                         hana::eval_if(
                             is_offset_type { },
                             [&offset, &modifier](auto _){
-                                offset = hana::value(_(modifier).value);
+                                offset = static_cast<ssize_t>(hana::value(_(modifier).value));
                             },
                             []{
                                 /* no-op */
@@ -48,7 +48,7 @@ beg_namespace_cpphibernate_driver_mariadb
                 std::ostringstream ss;
                 ss << "LIMIT " << limit;
                 if (offset >= 0)
-                    ss << " OFFSET" << offset;
+                    ss << " OFFSET " << offset;
                 statement.assign(ss.str());
             }
         }

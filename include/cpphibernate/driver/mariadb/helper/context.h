@@ -73,18 +73,7 @@ beg_namespace_cpphibernate_driver_mariadb
 
     public:
         template<typename T>
-        inline decltype(auto) get() const
-        {
-            if (!data)
-                throw misc::hibernate_exception("no data assigned!");
-            auto type_id = misc::get_type_id(hana::type_c<mp::decay_t<T>>);
-            if (type_id != data_id)
-            {
-                throw misc::hibernate_exception(static_cast<std::ostringstream&>(std::ostringstream { }
-                    << "invalid type! expected " << data_id << ", got " << type_id).str());
-            }
-            return *static_cast<T*>(data);
-        }
+        inline decltype(auto) get(const table_t* table = nullptr) const;
 
         template<typename T_data>
         inline data_context(
@@ -139,6 +128,47 @@ beg_namespace_cpphibernate_driver_mariadb
             , owner_field   (nullptr)
             , index         (-1)
             { }
+    };
+
+    /* read_context */
+
+    struct read_context
+        : public filter_context
+    {
+        bool        is_dynamic;
+        size_t      base_dataset_id;
+        std::string where;
+        std::string limit;
+        std::string order_by;
+
+        template<typename T_data>
+        inline read_context(
+                T_data&                     p_data,
+                const schema_t&             p_schema,
+                ::cppmariadb::connection&   p_connection,
+                const filter_t&             p_filter)
+            : filter_context    (p_data, p_schema, p_connection, p_filter)
+            , is_dynamic        (false)
+            , base_dataset_id   (0)
+            { }
+
+        virtual ~read_context() = default;
+
+        template<typename T_dataset>
+        inline T_dataset& emplace(const table_t* table = nullptr) const;
+
+        void emplace() const
+            { emplace_intern(nullptr); }
+
+        void finish() const
+            { finish_intern(); }
+
+    private:
+        virtual void* emplace_intern(void* data) const
+            { throw misc::hibernate_exception("read_context::emplace_intern is not implemented!"); }
+
+        virtual void finish_intern() const
+            { throw misc::hibernate_exception("read_context::finish_intern is not implemented!"); }
     };
 
 }

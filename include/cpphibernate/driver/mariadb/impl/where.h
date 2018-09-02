@@ -87,7 +87,7 @@ beg_namespace_cpphibernate_driver_mariadb
                 size_t index = 0;
                 hana::for_each(modifiers, [&](auto& modifier){
                     using modifier_type = mp::decay_t<decltype(modifier)>;
-                    using is_where_type = modifier::is_where_modifier<modifier_type>;
+                    using is_where_type = modifier::is_where<modifier_type>;
                     hana::eval_if(
                         is_where_type { },
                         [&](auto _){
@@ -144,7 +144,7 @@ beg_namespace_cpphibernate_driver_mariadb
             {
                 hana::for_each(modifiers, [&](auto& modifier){
                     using modifier_type = mp::decay_t<decltype(modifier)>;
-                    using is_where_type = modifier::is_where_modifier<modifier_type>;
+                    using is_where_type = modifier::is_where<modifier_type>;
                     hana::eval_if(
                         is_where_type { },
                         [&](auto _){

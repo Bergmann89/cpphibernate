@@ -39,7 +39,7 @@ beg_namespace_cpphibernate_driver_mariadb
     value_t value_field_t<T_field>
         ::get(const data_context& context) const
     {
-        auto& dataset = context.get<dataset_type>();
+        auto& dataset = context.get<dataset_type>(this->table);
         return type_props::convert_from(this->field.getter(dataset));
     }
 
@@ -47,7 +47,7 @@ beg_namespace_cpphibernate_driver_mariadb
     void value_field_t<T_field>
         ::set(const data_context& context, const value_t& value) const
     {
-        auto& dataset = context.get<dataset_type>();
+        auto& dataset = context.get<dataset_type>(this->table);
         this->field.setter(dataset, type_props::convert_to(value));
     }
 
