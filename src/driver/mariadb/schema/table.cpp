@@ -10,6 +10,7 @@
 #include <cpphibernate/driver/mariadb/schema/filter.h>
 
 using namespace ::utl;
+using namespace ::cpphibernate;
 using namespace ::cpphibernate::driver::mariadb_impl;
 
 /* data_extractor_t */
@@ -20,6 +21,7 @@ struct data_extractor_t
     const read_context&         _context;
     const ::cppmariadb::row&    _row;
 
+    const filter_t&             _filter;
     mutable size_t              _index;
 
     data_extractor_t(
@@ -29,6 +31,8 @@ struct data_extractor_t
         : _table        (p_table)
         , _context      (p_context)
         , _row          (p_row)
+        , _filter       (p_context.filter)
+        , _index        (0)
         { }
 
     inline value_t get_value() const
@@ -40,23 +44,26 @@ struct data_extractor_t
         return ret;
     }
 
-    inline void read_field(const field_t& field) const
+    inline void read_field(const field_t& field, const read_context* context) const
     {
-        field.set(_context, get_value());
+        if (context)
+        {
+            field.set(*context, get_value());
+        }
         ++_index;
     }
 
-    inline void read_table(const table_t& table) const
+    inline void read_table(const table_t& table, const read_context* context) const
     {
         if (table.base_table)
-            read_table(*table.base_table);
+            read_table(*table.base_table, context);
 
         if (_context.filter.is_excluded(table))
             return;
 
         /* primary key */
         assert(table.primary_key_field);
-        read_field(*table.primary_key_field);
+        read_field(*table.primary_key_field, context);
 
         /* data fields */
         for (auto& ptr : table.data_fields)
@@ -64,7 +71,27 @@ struct data_extractor_t
             assert(ptr);
             auto& field = *ptr;
             if (!_context.filter.is_excluded(field))
-                read_field(field);
+                read_field(field, context);
+        }
+
+        /* foreign table one */
+        for (auto& ptr : table.foreign_table_one_fields)
+        {
+            assert(ptr);
+            assert(ptr->referenced_table);
+
+            auto& field     = *ptr;
+            auto& ref_table = *field.referenced_table;
+
+            if (    _filter.is_excluded(field)
+                ||  _filter.is_excluded(ref_table))
+                continue;
+
+            read_context_ptr next_context;
+            if (context)
+                next_context = field.foreign_read(*context, get_value());
+
+            read_table(ref_table, next_context.get());
         }
     }
 
@@ -72,7 +99,9 @@ struct data_extractor_t
     {
         _index = 0;
         _context.emplace();
-        read_table(_table);
+        read_table(_table, &_context);
+        if (_index != _row.size())
+            throw misc::hibernate_exception("result was not completely read!");
     }
 };
 
@@ -84,7 +113,8 @@ struct select_query_builder_t
     const filter_t&     _filter;
     bool                _is_dynamic;
 
-    size_t              index { 0 };
+    size_t              alias_id { 0 };
+    size_t              index    { 0 };
     std::ostringstream  os;
     std::ostringstream  join;
 
@@ -97,36 +127,45 @@ struct select_query_builder_t
         , _is_dynamic(p_is_dynamic)
         { }
 
-    inline void add_field(const field_t& field)
+    inline std::string make_alias(const table_t& table)
+        { return std::string("T") + std::to_string(alias_id++); }
+
+    inline void add_field(const field_t& field, const std::string& alias)
     {
         if (index++) os << ", ";
-        os  <<  "`"
-            <<  field.table_name
+        os  <<  field.convert_from_open
+            <<  "`"
+            <<  alias
             <<  "`.`"
             <<  field.field_name
-            <<  "`";
+            <<  "`"
+            <<  field.convert_from_close;
     }
 
-    inline bool add_table(const table_t& table, const std::string& prefix)
+    inline bool add_table(const table_t& table, const std::string& alias)
     {
         bool ret = false;
 
         if (table.base_table)
         {
-            auto tmp = add_table(*table.base_table, "");
+            auto& base_table = *table.base_table;
+            auto  base_alias = make_alias(base_table);
+            auto  tmp        = add_table(base_table, base_alias);
             if (tmp)
             {
-                assert(table.base_table->primary_key_field);
-                auto& base_key = *table.base_table->primary_key_field;
+                assert(base_table.primary_key_field);
+                auto& base_key = *base_table.primary_key_field;
                 ret = true;
                 join    <<  " LEFT JOIN `"
-                        <<  table.table_name
+                        <<  base_table.table_name
+                        <<  "` AS `"
+                        <<  base_alias
                         <<  "` ON `"
-                        <<  table.table_name
+                        <<  alias
                         <<  "`.`"
                         <<  base_key.field_name
                         <<  "`=`"
-                        <<  base_key.table_name
+                        <<  base_alias
                         <<  "`.`"
                         <<  base_key.field_name
                         <<  "`";
@@ -152,7 +191,7 @@ struct select_query_builder_t
 
         /* primary key */
         assert(table.primary_key_field);
-        add_field(*table.primary_key_field);
+        add_field(*table.primary_key_field, alias);
 
         /* data fields */
         for (auto& ptr : table.data_fields)
@@ -160,7 +199,41 @@ struct select_query_builder_t
             assert(ptr);
             auto& field = *ptr;
             if (!_filter.is_excluded(field))
-                add_field(field);
+                add_field(field, alias);
+        }
+
+        /* foreign table one */
+        for (auto& ptr : table.foreign_table_one_fields)
+        {
+            assert(ptr);
+            assert(ptr->referenced_table);
+            assert(ptr->referenced_table->primary_key_field);
+
+            auto& field     = *ptr;
+            auto& ref_table = *field.referenced_table;
+            auto& ref_key   = *ref_table.primary_key_field;
+
+            if (    _filter.is_excluded(field)
+                ||  _filter.is_excluded(ref_table))
+                continue;
+
+            auto new_alias = make_alias(ref_table);
+            add_table(ref_table, new_alias);
+            join    <<  " LEFT JOIN `"
+                    <<  ref_table.table_name
+                    <<  "` AS `"
+                    <<  new_alias
+                    <<  "` ON `"
+                    <<  alias
+                    <<  "`.`"
+                    <<  ref_key.table_name
+                    <<  "_id_"
+                    <<  field.field_name
+                    <<  "`=`"
+                    <<  new_alias
+                    <<  "`.`"
+                    <<  ref_key.field_name
+                    <<  "`";
         }
 
         return ret;
@@ -169,9 +242,12 @@ struct select_query_builder_t
     inline std::string operator()()
     {
         os  <<  "SELECT ";
-        add_table(_table, "");
+        auto alias = make_alias(_table);
+        add_table(_table, alias);
         os  <<  " FROM `"
             <<  _table.table_name
+            <<  "` AS `"
+            <<  alias
             <<  "`"
             <<  join.str()
             <<  " ?where! ?order! ?limit!";

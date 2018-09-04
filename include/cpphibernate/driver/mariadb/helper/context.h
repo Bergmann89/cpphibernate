@@ -171,5 +171,7 @@ beg_namespace_cpphibernate_driver_mariadb
             { throw misc::hibernate_exception("read_context::finish_intern is not implemented!"); }
     };
 
+    using read_context_ptr = std::unique_ptr<read_context>;
+
 }
 end_namespace_cpphibernate_driver_mariadb

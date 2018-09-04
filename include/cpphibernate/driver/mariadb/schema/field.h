@@ -74,7 +74,10 @@ beg_namespace_cpphibernate_driver_mariadb
         virtual void        update                  ();
 
         /* CRUD */
-        virtual value_t     foreign_create_update   (const create_update_context& context) const;
+        using read_context_ptr = std::unique_ptr<read_context>;
+
+        virtual value_t          foreign_create_update  (const create_update_context& context) const;
+        virtual read_context_ptr foreign_read           (const read_context& context, const value_t& value) const;
 
         /* properties */
         virtual value_t     get                     (const data_context& context) const;
@@ -129,7 +132,7 @@ beg_namespace_cpphibernate_driver_mariadb
 
         virtual void    update  () override;
         virtual value_t get     (const data_context& context) const override;
-        virtual void    set     (const data_context& context, const value_t&) const override;
+        virtual void    set     (const data_context& context, const value_t& value) const override;
     };
 
     /* primary_key_field_t */
@@ -168,13 +171,16 @@ beg_namespace_cpphibernate_driver_mariadb
         : public simple_field_t<T_field>
     {
     public:
-        using base_type     = simple_field_t<T_field>;
-        using dataset_type  = typename base_type::dataset_type;
+        using base_type         = simple_field_t<T_field>;
+        using value_type        = typename base_type::value_type;
+        using real_value_type   = typename base_type::real_value_type;
+        using dataset_type      = typename base_type::dataset_type;
 
         using base_type::base_type;
 
     public:
-        virtual value_t foreign_create_update(const create_update_context& context) const override;
+        virtual value_t          foreign_create_update(const create_update_context& context) const override;
+        virtual read_context_ptr foreign_read         (const read_context& context, const value_t& value) const override;
     };
 
 }

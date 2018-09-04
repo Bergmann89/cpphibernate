@@ -203,13 +203,17 @@ void schema_t::init(const init_context& context) const
             "    CONTAINS SQL\n"
             "    SQL SECURITY INVOKER\n"
             "RETURN\n"
-            "    LCASE(CONCAT_WS('-',\n"
-            "        HEX(SUBSTR(_bin, 13, 4)),\n" // time low
-            "        HEX(SUBSTR(_bin, 11, 2)),\n" // time mid
-            "        HEX(SUBSTR(_bin,  9, 2)),\n" // time high and version
-            "        HEX(SUBSTR(_bin,  7, 2)),\n" // clock sequence
-            "        HEX(SUBSTR(_bin,  1, 6))\n"  // node id
-            "   )\n"
+            "    IF(\n"
+            "        _bin IS NULL,\n"
+            "        NULL,\n"
+            "        LCASE(CONCAT_WS('-',\n"
+            "            HEX(SUBSTR(_bin, 13, 4)),\n" // time low
+            "            HEX(SUBSTR(_bin, 11, 2)),\n" // time mid
+            "            HEX(SUBSTR(_bin,  9, 2)),\n" // time high and version
+            "            HEX(SUBSTR(_bin,  7, 2)),\n" // clock sequence
+            "            HEX(SUBSTR(_bin,  1, 6))\n"  // node id
+            "        )\n"
+            "    )\n"
             ")";
     exec_query();
 

@@ -149,7 +149,8 @@ void field_t::update()
 
 /* CRUD */
 
-throw_not_implemented(value_t,  foreign_create_update, const create_update_context&)
+throw_not_implemented(value_t,          foreign_create_update, const create_update_context&)
+throw_not_implemented(read_context_ptr, foreign_read,          const read_context&, const value_t&)
 
 /* properties */
 
