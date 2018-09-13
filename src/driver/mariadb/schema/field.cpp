@@ -24,6 +24,7 @@ void field_t::print(std::ostream& os) const
             << indent << "\"value_id\": "                   <<  value_id << ","
             << indent << "\"real_value_id\": "              <<  real_value_id << ","
             << indent << "\"value_is_nullable\": "          <<  (value_is_nullable ? "true" : "false") << ","
+            << indent << "\"value_is_pointer\": "           <<  (value_is_pointer ? "true" : "false") << ","
             << indent << "\"value_is_container\": "         <<  (value_is_container ? "true" : "false") << ","
             << indent << "\"value_is_auto_incremented\": "  <<  (value_is_auto_incremented ? "true" : "false") << ","
             << indent << "\"table\": "                      << (table ? std::string("\"") + table->table_name + "\"" : "null") << ","
@@ -150,7 +151,7 @@ void field_t::update()
 /* CRUD */
 
 throw_not_implemented(value_t,          foreign_create_update, const create_update_context&)
-throw_not_implemented(read_context_ptr, foreign_read,          const read_context&, const value_t&)
+throw_not_implemented(read_context_ptr, foreign_read,          const read_context&, bool fake_context)
 
 /* properties */
 

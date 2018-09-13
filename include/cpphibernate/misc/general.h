@@ -1,5 +1,7 @@
 #pragma once
 
+#include <iostream> // TODO debug!
+
 #include <cpphibernate/config.h>
 #include <cpputils/misc/type_helper.h>
 

@@ -24,6 +24,7 @@ beg_namespace_cpphibernate_driver_mariadb
         size_t          real_value_id               { 0 };          // unique id of the real/unwrapped value type
 
         bool            value_is_nullable           { false };      // value is stored in a nullable container
+        bool            value_is_pointer            { false };      // value is stored in a pointer container
         bool            value_is_container          { false };      // value is stored in a container
         bool            value_is_ordered            { false };      // value is stored in a ordered container (vector, list, ...)
         bool            value_is_auto_incremented   { false };      // value is a auto incremented field
@@ -53,6 +54,7 @@ beg_namespace_cpphibernate_driver_mariadb
             , value_id                  (std::move(other).value_id)
             , real_value_id             (std::move(other).real_value_id)
             , value_is_nullable         (std::move(other).value_is_nullable)
+            , value_is_pointer          (std::move(other).value_is_pointer)
             , value_is_container        (std::move(other).value_is_container)
             , value_is_auto_incremented (std::move(other).value_is_auto_incremented)
             , table                     (nullptr)
@@ -77,7 +79,7 @@ beg_namespace_cpphibernate_driver_mariadb
         using read_context_ptr = std::unique_ptr<read_context>;
 
         virtual value_t          foreign_create_update  (const create_update_context& context) const;
-        virtual read_context_ptr foreign_read           (const read_context& context, const value_t& value) const;
+        virtual read_context_ptr foreign_read           (const read_context& context, bool fake_context) const;
 
         /* properties */
         virtual value_t     get                     (const data_context& context) const;
@@ -180,7 +182,7 @@ beg_namespace_cpphibernate_driver_mariadb
 
     public:
         virtual value_t          foreign_create_update(const create_update_context& context) const override;
-        virtual read_context_ptr foreign_read         (const read_context& context, const value_t& value) const override;
+        virtual read_context_ptr foreign_read         (const read_context& context, bool fake_context) const override;
     };
 
 }

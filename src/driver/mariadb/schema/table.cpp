@@ -15,11 +15,23 @@ using namespace ::cpphibernate::driver::mariadb_impl;
 
 /* data_extractor_t */
 
+struct foreign_many_tuple_t
+{
+    const field_t&      field;
+    read_context_ptr    context;
+    std::string         owner;
+};
+
+struct foreign_many_list_t :
+    public std::list<foreign_many_tuple_t>
+    { };
+
 struct data_extractor_t
 {
     const table_t&              _table;
     const read_context&         _context;
     const ::cppmariadb::row&    _row;
+    foreign_many_list_t&        _foreign_many_list;
 
     const filter_t&             _filter;
     mutable size_t              _index;
@@ -27,13 +39,18 @@ struct data_extractor_t
     data_extractor_t(
         const table_t&              p_table,
         const read_context&         p_context,
-        const ::cppmariadb::row&    p_row)
-        : _table        (p_table)
-        , _context      (p_context)
-        , _row          (p_row)
-        , _filter       (p_context.filter)
-        , _index        (0)
+        const ::cppmariadb::row&    p_row,
+        foreign_many_list_t&        p_foreign_many_list)
+        : _table            (p_table)
+        , _context          (p_context)
+        , _row              (p_row)
+        , _foreign_many_list(p_foreign_many_list)
+        , _filter           (p_context.filter)
+        , _index            (0)
         { }
+
+    inline bool has_value() const
+        { return !_row.at(_index).is_null(); }
 
     inline value_t get_value() const
     {
@@ -44,26 +61,67 @@ struct data_extractor_t
         return ret;
     }
 
-    inline void read_field(const field_t& field, const read_context* context) const
+    inline void next_field() const
+        { ++_index; }
+
+    inline void read_field(const field_t& field, const read_context& context, bool skip = false) const
     {
-        if (context)
-        {
-            field.set(*context, get_value());
-        }
+        auto value = get_value();
         ++_index;
+        if (!skip)
+            field.set(context, value);
     }
 
-    inline void read_table(const table_t& table, const read_context* context) const
+    inline bool read_table(const table_t& table, const read_context& context, bool read_base, bool read_derived, bool skip = false) const
     {
-        if (table.base_table)
-            read_table(*table.base_table, context);
+        /* read the base table */
+        if (read_base && table.base_table)
+        {
+            skip = read_table(*table.base_table, context, true, false, skip);
+        }
+
+        /* create a dynamic dataset depending on the derived table */
+        else if (    read_base
+                 &&  context.is_dynamic
+                 && !table.derived_tables.empty())
+        {
+            auto value = get_value();
+            next_field();
+            if (static_cast<bool>(value) && !skip)
+            {
+                auto type = utl::from_string<uint>(*value);
+                auto derived = _table.get_derived_by_table_id(type);
+                if (!derived)
+                    throw misc::hibernate_exception(std::string("unable to find dereived table for id ") + std::to_string(type));
+                derived->emplace(context);
+            }
+            else
+            {
+                skip = true;
+            }
+        }
+
+        /* create a static dataset */
+        else if (has_value() && !skip)
+        {
+            if (read_base)
+            {
+                context.emplace();
+            }
+        }
+
+        /* no data -> skip */
+        else
+        {
+            skip = true;
+        }
 
         if (_context.filter.is_excluded(table))
-            return;
+            return skip;
 
         /* primary key */
         assert(table.primary_key_field);
-        read_field(*table.primary_key_field, context);
+        read_field(*table.primary_key_field, context, skip);
 
         /* data fields */
         for (auto& ptr : table.data_fields)
@@ -71,7 +129,7 @@ struct data_extractor_t
             assert(ptr);
             auto& field = *ptr;
             if (!_context.filter.is_excluded(field))
-                read_field(field, context);
+                read_field(field, context, skip);
         }
 
         /* foreign table one */
@@ -87,19 +145,54 @@ struct data_extractor_t
                 ||  _filter.is_excluded(ref_table))
                 continue;
 
-            read_context_ptr next_context;
-            if (context)
-                next_context = field.foreign_read(*context, get_value());
-
-            read_table(ref_table, next_context.get());
+            auto next_context = field.foreign_read(context, skip);
+            assert(static_cast<bool>(next_context));
+            read_table(ref_table, *next_context, true, true, skip);
+            next_context->finish();
         }
+
+        /* foreign table many */
+        if (!skip)
+        {
+            for (auto& ptr : table.foreign_table_many_fields)
+            {
+                assert(ptr);
+                assert(ptr->referenced_table);
+
+                auto& field     = *ptr;
+                auto& ref_table = *field.referenced_table;
+
+                if (    _filter.is_excluded(field)
+                    ||  _filter.is_excluded(ref_table))
+                    continue;
+
+                _foreign_many_list.emplace_back(
+                    foreign_many_tuple_t {
+                        field,
+                        field.foreign_read(context, false),
+                        *table.primary_key_field->get(context),
+                    });
+            }
+        }
+
+        /* derived tables */
+        if (read_derived && context.is_dynamic)
+        {
+            for (auto& ptr : table.derived_tables)
+            {
+                assert(ptr);
+                auto& derived_table = *ptr;
+                read_table(derived_table, context, false, true, skip);
+            }
+        }
+
+        return skip;
     }
 
     inline void operator()() const
     {
         _index = 0;
-        _context.emplace();
-        read_table(_table, &_context);
+        read_table(_table, _context, true, true, false);
         if (_index != _row.size())
             throw misc::hibernate_exception("result was not completely read!");
     }
@@ -109,14 +202,23 @@ struct data_extractor_t
 
 struct select_query_builder_t
 {
-    const table_t&      _table;
-    const filter_t&     _filter;
-    bool                _is_dynamic;
+    struct local_context
+    {
+        const table_t&      table;
+        std::string         alias;
+        bool                add_base;
+        bool                add_derived;
+        bool                is_dynamic;
+    };
 
-    size_t              alias_id { 0 };
-    size_t              index    { 0 };
-    std::ostringstream  os;
-    std::ostringstream  join;
+    const table_t&          _table;
+    const filter_t&         _filter;
+    bool                    _is_dynamic;
+
+    size_t                  alias_id { 0 };
+    size_t                  index    { 0 };
+    std::ostringstream      os;
+    std::list<std::string>  joins;
 
     select_query_builder_t(
         const table_t&  p_table,
@@ -127,7 +229,7 @@ struct select_query_builder_t
         , _is_dynamic(p_is_dynamic)
         { }
 
-    inline std::string make_alias(const table_t& table)
+    inline std::string make_alias()
         { return std::string("T") + std::to_string(alias_id++); }
 
     inline void add_field(const field_t& field, const std::string& alias)
@@ -142,68 +244,87 @@ struct select_query_builder_t
             <<  field.convert_from_close;
     }
 
-    inline bool add_table(const table_t& table, const std::string& alias)
+    inline bool add_table(const local_context& ctx)
     {
-        bool ret = false;
+        bool ret        = false;
+        auto has_alias  = !ctx.alias.empty();
+        auto real_alias = has_alias ? ctx.alias : ctx.table.table_name;
 
-        if (table.base_table)
+        if (ctx.table.base_table && ctx.add_base)
         {
-            auto& base_table = *table.base_table;
-            auto  base_alias = make_alias(base_table);
-            auto  tmp        = add_table(base_table, base_alias);
-            if (tmp)
+            assert(ctx.table.base_table->primary_key_field);
+            auto& base_table      = *ctx.table.base_table;
+            auto& base_key        = *base_table.primary_key_field;
+            auto  base_alias      = has_alias ? make_alias() : std::string();
+            auto  real_base_alias = has_alias ? base_alias : base_table.table_name;
+
+            std::ostringstream ss;
+            ss  <<  " JOIN `"
+                <<  base_table.table_name;
+            if (has_alias)
             {
-                assert(base_table.primary_key_field);
-                auto& base_key = *base_table.primary_key_field;
+                ss  <<  "` AS `"
+                    <<  base_alias;
+            }
+            ss  <<  "` ON `"
+                <<  real_alias
+                <<  "`.`"
+                <<  base_key.field_name
+                <<  "`=`"
+                <<  real_base_alias
+                <<  "`.`"
+                <<  base_key.field_name
+                <<  "`";
+
+            auto it = joins.insert(joins.end(), ss.str());
+            if (add_table({
+                    base_table,
+                    base_alias,
+                    true,
+                    false,
+                    ctx.is_dynamic
+                }))
+            {
                 ret = true;
-                join    <<  " LEFT JOIN `"
-                        <<  base_table.table_name
-                        <<  "` AS `"
-                        <<  base_alias
-                        <<  "` ON `"
-                        <<  alias
-                        <<  "`.`"
-                        <<  base_key.field_name
-                        <<  "`=`"
-                        <<  base_alias
-                        <<  "`.`"
-                        <<  base_key.field_name
-                        <<  "`";
+            }
+            else
+            {
+                joins.erase(it);
             }
         }
 
         /* __type */
-        if (    _is_dynamic
-            && !table.base_table
-            && !table.derived_tables.empty())
+        if (    ctx.is_dynamic
+            && !ctx.table.base_table
+            && !ctx.table.derived_tables.empty())
         {
             if (index++) os << ", ";
             os  <<  "`"
-                <<  table.table_name
+                <<  ctx.table.table_name
                 <<  "`.`__type` AS `__type`";
             ret = true;
         }
 
-        if (_filter.is_excluded(table))
+        if (_filter.is_excluded(ctx.table))
             return ret;
 
         ret = true;
 
         /* primary key */
-        assert(table.primary_key_field);
-        add_field(*table.primary_key_field, alias);
+        assert(ctx.table.primary_key_field);
+        add_field(*ctx.table.primary_key_field, real_alias);
 
         /* data fields */
-        for (auto& ptr : table.data_fields)
+        for (auto& ptr : ctx.table.data_fields)
         {
             assert(ptr);
             auto& field = *ptr;
             if (!_filter.is_excluded(field))
-                add_field(field, alias);
+                add_field(field, real_alias);
         }
 
         /* foreign table one */
-        for (auto& ptr : table.foreign_table_one_fields)
+        for (auto& ptr : ctx.table.foreign_table_one_fields)
         {
             assert(ptr);
             assert(ptr->referenced_table);
@@ -217,23 +338,84 @@ struct select_query_builder_t
                 ||  _filter.is_excluded(ref_table))
                 continue;
 
-            auto new_alias = make_alias(ref_table);
-            add_table(ref_table, new_alias);
-            join    <<  " LEFT JOIN `"
-                    <<  ref_table.table_name
-                    <<  "` AS `"
-                    <<  new_alias
-                    <<  "` ON `"
-                    <<  alias
+            auto new_alias = make_alias();
+
+            std::ostringstream ss;
+            ss  <<  " LEFT JOIN `"
+                <<  ref_table.table_name
+                <<  "` AS `"
+                <<  new_alias
+                <<  "` ON `"
+                <<  real_alias
+                <<  "`.`"
+                <<  ref_key.table_name
+                <<  "_id_"
+                <<  field.field_name
+                <<  "`=`"
+                <<  new_alias
+                <<  "`.`"
+                <<  ref_key.field_name
+                <<  "`";
+
+            auto it = joins.insert(joins.end(), ss.str());
+            if (!add_table({
+                    ref_table,
+                    new_alias,
+                    true,
+                    true,
+                    field.value_is_pointer
+                }))
+            {
+                joins.erase(it);
+            }
+        }
+
+        /* derived tables */
+        if (ctx.add_derived && ctx.is_dynamic)
+        {
+            for (auto& ptr : ctx.table.derived_tables)
+            {
+                assert(ptr);
+                assert(ptr->primary_key_field);
+                auto& derived_table      = *ptr;
+                auto& primary_key        = *ctx.table.primary_key_field;
+                auto  derived_alias      = has_alias ? make_alias() : std::string();
+                auto  real_derived_alias = has_alias ? derived_alias : derived_table.table_name;
+
+                std::ostringstream ss;
+                ss  <<  " LEFT JOIN `"
+                    <<  derived_table.table_name;
+                if (has_alias)
+                {
+                    ss  <<  "` AS `"
+                        <<  derived_alias;
+                }
+                ss  <<  "` ON `"
+                    <<  real_alias
                     <<  "`.`"
-                    <<  ref_key.table_name
-                    <<  "_id_"
-                    <<  field.field_name
+                    <<  primary_key.field_name
                     <<  "`=`"
-                    <<  new_alias
+                    <<  real_derived_alias
                     <<  "`.`"
-                    <<  ref_key.field_name
+                    <<  primary_key.field_name
                     <<  "`";
+
+                auto it = joins.insert(joins.end(), ss.str());
+                if (add_table({
+                        derived_table,
+                        derived_alias,
+                        false,
+                        true,
+                        ctx.is_dynamic,
+                    }))
+                {
+                    ret = true;
+                }
+                else
+                {
+                    joins.erase(it);
+                }
+            }
         }
 
         return ret;
@@ -242,15 +424,21 @@ struct select_query_builder_t
     inline std::string operator()()
     {
         os  <<  "SELECT ";
-        auto alias = make_alias(_table);
-        add_table(_table, alias);
+        add_table({
+            _table,
+            "",
+            true,
+            true,
+            _is_dynamic,
+        });
         os  <<  " FROM `"
             <<  _table.table_name
-            <<  "` AS `"
-            <<  alias
-            <<  "`"
-            <<  join.str()
-            <<  " ?where! ?order! ?limit!";
+            <<  "`";
+
+        for (auto& join : joins)
+            os << join;
+
+        os  <<  " ?where! ?order! ?limit!";
         return os.str();
     }
 };
@@ -958,18 +1146,34 @@ void table_t::print(std::ostream& os) const
         << indent << '}';
 }
 
-const table_t* table_t::get_derived(size_t id) const
+const table_t* table_t::get_derived_by_table_id(size_t id) const
+{
+    if (table_id == id)
+        return this;
+    for (auto ptr : derived_tables)
+    {
+        assert(ptr);
+        auto ret = ptr->get_derived_by_table_id(id);
+        if (ret) return ret;
+    }
+    return nullptr;
+}
+
+const table_t* table_t::get_derived_by_dataset_id(size_t id) const
 {
     if (dataset_id == id)
         return this;
     for (auto ptr : derived_tables)
     {
         assert(ptr);
-        auto ret = ptr->get_derived(id);
+        auto ret = ptr->get_derived_by_dataset_id(id);
         if (ret) return ret;
     }
     return nullptr;
 }
+
+void table_t::emplace(const read_context& context) const
+    { throw misc::hibernate_exception(std::string("'") + table_name + "' does not implement the emplace() method!"); }
 
 ::cppmariadb::statement& table_t::get_statement_create_table() const
 {
@@ -1051,13 +1255,47 @@ void table_t::read_exec(const read_context& context) const
 {
     auto& statement  = get_statement_select(context);
     auto& connection = context.connection;
+
+    statement.set(0, context.where);
+    statement.set(1, context.order_by);
+    statement.set(2, context.limit);
+
     cpphibernate_debug_log("execute SELECT query: " << statement.query(connection));
     auto result = connection.execute_used(statement);
     if (!result)
         throw misc::hibernate_exception("Unable to fetching data from database!");
 
     ::cppmariadb::row* row;
+    foreign_many_list_t foreign_many_list;
     while ((row = result->next()))
-        data_extractor_t(*this, context, *row)();
+        data_extractor_t(*this, context, *row, foreign_many_list)();
     context.finish();
+
+    for (auto& tuple : foreign_many_list)
+    {
+        auto& field        = tuple.field;
+        auto& next_context = *tuple.context;
+        assert(field.table);
+        assert(field.referenced_table);
+        assert(field.referenced_table->primary_key_field);
+        auto& ref_table    = *field.referenced_table;
+        auto& ref_field    = *ref_table.primary_key_field;
+
+        std::ostringstream ss;
+        ss  <<  "WHERE (`"
+            <<  ref_table.table_name
+            <<  "`.`"
+            <<  field.table_name
+            <<  "_id_"
+            <<  field.field_name
+            <<  "`="
+            <<  ref_field.convert_to_open
+            <<  "'"
+            <<  context.connection.escape(tuple.owner)
+            <<  "'"
+            <<  ref_field.convert_to_close
+            <<  ")";
+        next_context.where = ss.str();
+        ref_table.read(next_context);
+    }
 }

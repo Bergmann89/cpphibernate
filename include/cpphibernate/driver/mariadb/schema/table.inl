@@ -9,6 +9,11 @@ beg_namespace_cpphibernate_driver_mariadb
     /* table_polymorphic_t */
 
     template<typename T_schema, typename T_table, typename T_base_dataset>
+    void table_polymorphic_t<T_schema, T_table, T_base_dataset>
+        ::emplace(const read_context& context) const
+        { context.emplace<real_dataset_type>(this); }
+
+    template<typename T_schema, typename T_table, typename T_base_dataset>
     template<typename T_dataset, typename T_pred, typename T_include_self>
     constexpr void table_polymorphic_t<T_schema, T_table, T_base_dataset>
         ::for_each_derived(T_dataset& dataset, const T_include_self& include_self, const T_pred& pred) const
@@ -42,7 +47,7 @@ beg_namespace_cpphibernate_driver_mariadb
             {
                 using derived_dataset_type  = mp::decay_t<decltype(derived_dataset)>;
                 auto  derived_dataset_id    = misc::get_type_id(hana::type_c<derived_dataset_type>);
-                auto  derived_table         = this->get_derived(derived_dataset_id);
+                auto  derived_table         = this->get_derived_by_dataset_id(derived_dataset_id);
                 if (!derived_table)
                 {
                     throw misc::hibernate_exception(static_cast<std::ostringstream&>(std::ostringstream { }
@@ -71,7 +76,7 @@ beg_namespace_cpphibernate_driver_mariadb
             },
             [this, &context](auto _)->std::string {
                 using tmp_type = misc::decay_unwrap_t<decltype(_(hana::type_c<base_dataset_type>))>;
-                assert(base_table);
+                assert(this->base_table);
                 auto& dataset = context.get<dataset_type>();
                 auto& base    = static_cast<tmp_type&>(dataset);
                 return this->base_table->create_update_exec(change_context(context, base));

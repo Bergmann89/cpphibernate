@@ -21,6 +21,7 @@ beg_namespace_cpphibernate_driver_mariadb
         real_value_id   = misc::get_type_id(hana::type_c<real_value_type>);
 
         value_is_nullable  = misc::is_nullable<value_type>::value;
+        value_is_pointer   = misc::is_pointer<value_type>::value;
         value_is_container = misc::is_container<value_type>::value;
         value_is_ordered   = misc::is_ordered<value_type>::value;
     }
@@ -39,7 +40,7 @@ beg_namespace_cpphibernate_driver_mariadb
     value_t value_field_t<T_field>
         ::get(const data_context& context) const
     {
-        auto& dataset = context.get<dataset_type>(this->table);
+        auto& dataset = context.get<dataset_type>();
         return type_props::convert_from(this->field.getter(dataset));
     }
 
@@ -47,7 +48,7 @@ beg_namespace_cpphibernate_driver_mariadb
     void value_field_t<T_field>
         ::set(const data_context& context, const value_t& value) const
     {
-        auto& dataset = context.get<dataset_type>(this->table);
+        auto& dataset = context.get<dataset_type>();
         this->field.setter(dataset, type_props::convert_to(value));
     }
 
@@ -89,38 +90,22 @@ beg_namespace_cpphibernate_driver_mariadb
 
     template<typename T_field>
     read_context_ptr foreign_table_field_t<T_field>
-        ::foreign_read(const read_context& context, const value_t& value) const
+        ::foreign_read(const read_context& context, bool fake_context) const
     {
-        using is_nullable_type = misc::is_nullable<value_type>;
-        return hana::eval_if(
-            is_nullable_type { },
-            [&](auto _) {
-                auto& dataset = _(context).template get<dataset_type>();
-                auto& member  = this->field.getter(dataset);
-                using nullable_helper_type = misc::nullable_helper<mp::decay_t<decltype(member)>>;
-                if (value.has_value())
-                {
-                    auto& new_dataset = nullable_helper_type::set(member, real_value_type { });
-                    auto  new_context = change_context(context, new_dataset);
-                    return std::make_unique<read_context>(new_context);
-                }
-                else
-                {
-                    nullable_helper_type::clear(member);
-                    return read_context_ptr { };
-                }
-            },
-            [&](auto _) {
-                if (!value.has_value())
-                {
-                    throw misc::hibernate_exception(std::string("excepted value for field ") +
-                        this->table_name + "." + this->field_name + " but received null!");
-                }
-                auto& dataset     = context.get<dataset_type>();
-                auto& member      = this->field.getter(dataset);
-                auto  new_context = change_context(context, member);
-                return std::make_unique<read_context>(new_context);
-            });
+        if (!fake_context)
+        {
+            auto& dataset      = context.get<dataset_type>();
+            auto& member       = this->field.getter(dataset);
+            auto  new_context  = make_read_context(member, context.schema, context.connection, context.filter);
+            using context_type = mp::decay_t<decltype(new_context)>;
+            return std::make_unique<context_type>(new_context);
+        }
+        else
+        {
+            auto  new_context  = make_fake_context(hana::type_c<value_type>, context.schema, context.connection, context.filter);
+            using context_type = mp::decay_t<decltype(new_context)>;
+            return std::make_unique<context_type>(new_context);
+        }
     }
 
     namespace __impl

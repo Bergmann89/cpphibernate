@@ -44,11 +44,19 @@ beg_namespace_cpphibernate_driver_mariadb
         template<typename T_dataset, typename T_modifiers>
         inline void read_impl(T_dataset& dataset, T_modifiers&& modifiers) const
         {
-            read_context context(dataset, _schema, _connection, _filter);
+            using dataset_type      = mp::decay_t<T_dataset>;
+            using real_dataset_type = misc::real_dataset_t<dataset_type>;
+
+            auto  dataset_id = misc::get_type_id(hana::type_c<real_dataset_type>);
+            auto& table      = _schema.table(dataset_id);
+            auto  context    = make_read_context(dataset, _schema, _connection, _filter);
             context.where    = build_where(_schema, modifiers).query(_connection);
             context.limit    = build_limit(modifiers).query(_connection);
             context.order_by = build_order_by(_schema, modifiers).query(_connection);
-            read_impl_t<T_dataset>::apply(context);
+
+            transaction_lock trans(_connection);
+            table.read(context);
+            trans.commit();
         }
     };
 

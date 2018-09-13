@@ -64,7 +64,10 @@ beg_namespace_cpphibernate_driver_mariadb
 
         void print(std::ostream& os) const;
 
-        const table_t* get_derived(size_t id) const;
+        const table_t* get_derived_by_table_id(size_t id) const;
+        const table_t* get_derived_by_dataset_id(size_t id) const;
+
+        virtual void emplace(const read_context& context) const;
 
         /* CRUD */
         inline void init_stage1(const init_context& context) const
@@ -158,8 +161,11 @@ beg_namespace_cpphibernate_driver_mariadb
         using table_type        = typename base_type::table_type;
         using base_dataset_type = typename base_type::base_dataset_type;
         using dataset_type      = typename table_type::dataset_type;
+        using real_dataset_type = misc::real_dataset_t<dataset_type>;
 
         using base_type::base_type;
+
+        virtual void emplace(const read_context& context) const override;
 
     private:
         template<typename T_dataset, typename T_pred, typename T_include_self>

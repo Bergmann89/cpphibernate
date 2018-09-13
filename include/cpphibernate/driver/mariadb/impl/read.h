@@ -9,85 +9,228 @@
 beg_namespace_cpphibernate_driver_mariadb
 {
 
-    /* read_impl_t */
-
-    template<typename T_dataset, typename = void>
-    struct read_impl_t
+    namespace __impl
     {
-        using dataset_type = T_dataset;
 
-        struct context_impl
-            : public read_context
+        template<typename T, typename = void>
+        struct make_read_context_impl
         {
-            mutable size_t count;
-
-            template<typename T_read_context>
-            context_impl(T_read_context&& p_read_context)
-                : read_context  (std::forward<T_read_context>(p_read_context))
-                , count         (0)
-                { }
-
-        private:
-            virtual void* emplace_intern(void* data) const override
-            {
-                if (data)
-                    throw misc::hibernate_exception("This context has a pre assigned dataset and can therefor not work in dynamic mode!");
-                ++count;
-                if (count > 1)
-                    throw misc::hibernate_exception("Expected exactly one dataset, but received more!");
-                return nullptr;
-            }
-
-            virtual void finish_intern() const override
-            {
-                if (count < 1)
-                    throw misc::hibernate_exception("Expected exactly one dataset, but received none!");
-            }
+            template<typename... T_args>
+            static constexpr decltype(auto) apply(T_args&&... args)
+                { static_assert(sizeof...(args) == -1, "Invalid parameters for mariadb::make_read_context(...)!"); }
         };
 
-        static inline void apply(const read_context& context)
+        template<typename T_dataset, typename... T_args>
+        struct make_read_context_impl<
+            mp::list<T_dataset, T_args...>,
+            mp::enable_if_c<
+                   !misc::is_container<mp::decay_t<T_dataset>>::value
+                && !misc::is_nullable<mp::decay_t<T_dataset>>::value>>
         {
-            auto  dataset_id = misc::get_type_id(hana::type_c<dataset_type>);
-            auto& connection = context.connection;
-            auto& schema     = context.schema;
-            auto& table      = schema.table(dataset_id);
+            using dataset_type = mp::decay_t<T_dataset>;
 
-            transaction_lock trans(connection);
-            table.read(context_impl(context));
-            trans.commit();
-        }
-    };
+            struct context_impl
+                : public read_context
+            {
+            private:
+                mutable size_t  _count;
+                dataset_type&   _dataset;
 
-    /* read_impl_t - nullable */
+            public:
+                template<typename... X_args>
+                context_impl(dataset_type& dataset, X_args&&... args)
+                    : read_context  (std::forward<X_args>(args)...)
+                    , _count        (0)
+                    , _dataset      (dataset)
+                {
+                    is_dynamic      = false;
+                    base_dataset_id = misc::get_type_id(hana::type_c<dataset_type>);
+                }
 
-    template<typename T_dataset>
-    struct read_impl_t<
-        T_dataset,
-        mp::enable_if<misc::is_nullable<T_dataset>>>
+            private:
+                virtual void* emplace_intern(void* data, size_t dataset_id) const override
+                {
+                    if (data || dataset_id != 0)
+                        throw misc::hibernate_exception("Static datasets can not be assigned!");
+                    ++_count;
+                    if (_count > 1)
+                        throw misc::hibernate_exception("Expected exactly one dataset, but received more!");
+                    return set(_dataset);
+                }
+
+                virtual void finish_intern() const override
+                {
+                    if (_count < 1)
+                        throw misc::hibernate_exception("Expected exactly one dataset, but received none!");
+                }
+            };
+
+            static constexpr decltype(auto) apply(dataset_type& dataset, T_args&&... args)
+                { return context_impl(dataset, std::forward<T_args>(args)...); }
+        };
+
+        template<typename T_dataset, typename... T_args>
+        struct make_read_context_impl<
+            mp::list<T_dataset, T_args...>,
+            mp::enable_if_c<
+                   !misc::is_container<mp::decay_t<T_dataset>>::value
+                &&  misc::is_nullable<mp::decay_t<T_dataset>>::value>>
+        {
+            using dataset_type          = mp::decay_t<T_dataset>;
+            using nullable_helper_type  = misc::nullable_helper<dataset_type>;
+            using value_type            = typename nullable_helper_type::value_type;
+
+            struct context_impl
+                : public read_context
+            {
+            private:
+                dataset_type&   _dataset;
+                mutable size_t  _count;
+
+            public:
+                template<typename... X_args>
+                context_impl(dataset_type& dataset, X_args&&... args)
+                    : read_context  (std::forward<X_args>(args)...)
+                    , _dataset      (dataset)
+                    , _count        (0)
+                {
+                    is_dynamic      = misc::is_pointer<dataset_type>::value;
+                    base_dataset_id = misc::get_type_id(hana::type_c<value_type>);
+                    nullable_helper_type::clear(_dataset);
+                }
+
+            private:
+                virtual void* emplace_intern(void* data, size_t dataset_id) const override
+                {
+                    if (data && !misc::is_pointer<dataset_type>::value)
+                        throw misc::hibernate_exception("This is not a pointer type!");
+                    ++_count;
+                    if (_count > 1)
+                        throw misc::hibernate_exception("Expected exactly one dataset, but received more!");
+
+                    if (data)
+                    {
+                        auto* cast  = static_cast<value_type*>(data);
+                        auto& value = nullable_helper_type::set(_dataset, cast);
+                        if (cast != &value)
+                            throw misc::hibernate_exception("Nullable pointer value has changed!");
+                        return set(value, dataset_id);
+                    }
+                    else
+                    {
+                        auto& value = nullable_helper_type::set(_dataset, value_type { });
+                        return set(value);
+                    }
+                }
+
+                virtual void finish_intern() const override
+                    { }
+            };
+
+            static constexpr decltype(auto) apply(dataset_type& dataset, T_args&&... args)
+                { return context_impl(dataset, std::forward<T_args>(args)...); }
+        };
+
+        template<typename T_dataset, typename... T_args>
+        struct make_read_context_impl<
+            mp::list<T_dataset, T_args...>,
+            mp::enable_if_c<
+                    misc::is_container<mp::decay_t<T_dataset>>::value
+                && !misc::is_nullable<mp::decay_t<T_dataset>>::value>>
+        {
+            using dataset_type          = mp::decay_t<T_dataset>;
+            using real_dataset_type     = misc::real_dataset_t<dataset_type>;
+            using container_helper_type = misc::container_helper<dataset_type>;
+            using value_type            = typename container_helper_type::value_type;
+
+            struct context_impl
+                : public read_context
+            {
+            private:
+                dataset_type&   _dataset;
+                mutable size_t  _count;
+
+            public:
+                template<typename... X_args>
+                context_impl(dataset_type& dataset, X_args&&... args)
+                    : read_context  (std::forward<X_args>(args)...)
+                    , _dataset      (dataset)
+                    , _count        (0)
+                {
+                    is_dynamic      = misc::is_pointer<value_type>::value;
+                    base_dataset_id = misc::get_type_id(hana::type_c<real_dataset_type>);
+                    container_helper_type::clear(_dataset);
+                }
+
+            private:
+                virtual void* emplace_intern(void* data, size_t dataset_id) const override
+                {
+                    if (data || dataset_id != 0)
+                        throw misc::hibernate_exception("Static datasets can not be assigned!");
+                    auto& value = container_helper_type::emplace(_dataset);
+                    return set(value);
+                }
+
+                virtual void finish_intern() const override
+                    { }
+            };
+
+            static constexpr decltype(auto) apply(dataset_type& dataset, T_args&&... args)
+                { return context_impl(dataset, std::forward<T_args>(args)...); }
+        };
+
+    }
+
+    constexpr decltype(auto) make_read_context = misc::make_generic_predicate<__impl::make_read_context_impl> { };
+
+    namespace __impl
     {
-        using dataset_type          = T_dataset;
-        using nullable_helper_type  = misc::nullable_helper<dataset_type>;
 
-        static inline void apply(const read_context& context)
+        template<typename T, typename = void>
+        struct make_fake_context_impl
         {
+            template<typename... T_args>
+            static constexpr decltype(auto) apply(T_args&&... args)
+                { static_assert(sizeof...(args) == -1, "Invalid parameters for mariadb::make_fake_context(...)!"); }
+        };
 
-        }
-    };
-
-    /* read_impl_t - container */
-
-    template<typename T_dataset>
-    struct read_impl_t<
-        T_dataset,
-        mp::enable_if<misc::is_container<T_dataset>>>
-    {
-        using dataset_type = T_dataset;
-
-        static inline void apply(const read_context& context)
+        template<typename T_wrapped_dataset, typename... T_args>
+        struct make_fake_context_impl<
+            mp::list<T_wrapped_dataset, T_args...>,
+            mp::enable_if_c<
+                hana::is_a_t<hana::type_tag, T_wrapped_dataset>::value>>
         {
+            using wrapped_dataset_type = mp::decay_t<T_wrapped_dataset>;
+            using dataset_type         = misc::unwrap_t<wrapped_dataset_type>;
+            using real_dataset_type    = misc::real_dataset_t<dataset_type>;
 
-        }
-    };
+            struct context_impl
+                : public read_context
+            {
+            public:
+                template<typename... X_args>
+                context_impl(X_args&&... args)
+                    : read_context  (std::forward<X_args>(args)...)
+                {
+                    is_dynamic      = misc::is_pointer<dataset_type>::value;
+                    base_dataset_id = misc::get_type_id(hana::type_c<real_dataset_type>);
+                }
+
+            private:
+                virtual void* emplace_intern(void* data, size_t dataset_id) const override
+                    { return nullptr; }
+
+                virtual void finish_intern() const override
+                    { }
+            };
+
+            static constexpr decltype(auto) apply(T_wrapped_dataset&&, T_args&&... args)
+                { return context_impl(std::forward<T_args>(args)...); }
+        };
+
+    }
+
+    constexpr decltype(auto) make_fake_context = misc::make_generic_predicate<__impl::make_fake_context_impl> { };
 
 }
 end_namespace_cpphibernate_driver_mariadb

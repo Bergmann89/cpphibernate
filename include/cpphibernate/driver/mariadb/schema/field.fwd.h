@@ -6,7 +6,7 @@
 
 beg_namespace_cpphibernate_driver_mariadb
 {
-    
+
     /* field_t */
 
     struct field_t;

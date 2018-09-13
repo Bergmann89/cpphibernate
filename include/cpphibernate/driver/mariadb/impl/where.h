@@ -98,7 +98,6 @@ beg_namespace_cpphibernate_driver_mariadb
                         },
                         []{ });
                 });
-                os << ")";
                 statement.assign(os.str());
             }
         };

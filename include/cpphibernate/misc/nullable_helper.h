@@ -37,6 +37,9 @@ beg_namespace_cpphibernate_misc
         static inline const value_type* get(const nullable_type& x)
             { return x.has_value() ? &x.value() : nullptr; }
 
+        static inline value_type& set(nullable_type& x, const value_type* value)
+            { return *(x = *value); }
+
         static inline value_type& set(nullable_type& x, const value_type& value)
             { return *(x = value); }
 
@@ -58,15 +61,21 @@ beg_namespace_cpphibernate_misc
         static inline value_type* get(const nullable_type& x)
             { return x.get(); }
 
-        static inline value_type& set(nullable_type& x, value_type&& value)
+        static inline value_type& set(nullable_type& x, value_type* value)
         {
-            x.reset(new value_type(std::move(value)));
+            x.reset(value);
             return *x;
         }
 
         static inline value_type& set(nullable_type& x, const value_type& value)
         {
             x.reset(new value_type(value));
+            return *x;
+        }
+
+        static inline value_type& set(nullable_type& x, value_type&& value)
+        {
+            x.reset(new value_type(std::move(value)));
             return *x;
         }
 
@@ -85,15 +94,21 @@ beg_namespace_cpphibernate_misc
         static inline value_type* get(const nullable_type& x)
             { return x.get(); }
 
-        static inline value_type& set(nullable_type& x, value_type&& value)
+        static inline value_type& set(nullable_type& x, value_type* value)
         {
-            x.reset(new value_type(std::move(value)));
+            x.reset(value);
             return *x;
         }
 
         static inline value_type& set(nullable_type& x, const value_type& value)
         {
             x.reset(new value_type(value));
+            return *x;
+        }
+
+        static inline value_type& set(nullable_type& x, value_type&& value)
+        {
+            x.reset(new value_type(std::move(value)));
             return *x;
         }
 
