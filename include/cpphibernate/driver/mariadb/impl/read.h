@@ -103,7 +103,7 @@ beg_namespace_cpphibernate_driver_mariadb
                 virtual void* emplace_intern(void* data, size_t dataset_id) const override
                 {
                     if (data && !misc::is_pointer<dataset_type>::value)
-                        throw misc::hibernate_exception("This is not a pointer type!");
+                        throw misc::hibernate_exception("None pointer type can not be assigned!");
                     ++_count;
                     if (_count > 1)
                         throw misc::hibernate_exception("Expected exactly one dataset, but received more!");
@@ -165,10 +165,31 @@ beg_namespace_cpphibernate_driver_mariadb
             private:
                 virtual void* emplace_intern(void* data, size_t dataset_id) const override
                 {
-                    if (data || dataset_id != 0)
-                        throw misc::hibernate_exception("Static datasets can not be assigned!");
-                    auto& value = container_helper_type::emplace(_dataset);
-                    return set(value);
+                    return hana::eval_if(
+                        misc::is_nullable<value_type> { },
+                        [this, &data, &dataset_id](auto _){
+                            using nullable_type         = typename mp::decay_t<decltype(_(hana::type_c<value_type>))>::type;
+                            using nullable_helper_type  = misc::nullable_helper<nullable_type>;
+                            using inner_value_type      = typename nullable_helper_type::value_type;
+
+                            if (!data)
+                                throw misc::hibernate_exception("Expected dynamic data for pointer type!");
+                            if (!misc::is_pointer<nullable_type>::value)
+                                throw misc::hibernate_exception("None pointer type can not be assigned!");
+
+                            auto& nullable = container_helper_type::emplace(this->_dataset);
+                            auto* cast     = static_cast<inner_value_type*>(data);
+                            auto& value    = nullable_helper_type::set(nullable, cast);
+                            if (cast != &value)
+                                throw misc::hibernate_exception("Nullable pointer value has changed!");
+                            return set(value, dataset_id);
+                        },
+                        [this, &data, &dataset_id](){
+                            if (data || dataset_id != 0)
+                                throw misc::hibernate_exception("Static datasets can not be assigned!");
+                            auto& value = container_helper_type::emplace(this->_dataset);
+                            return this->set(value);
+                        });
                 }
 
                 virtual void finish_intern() const override

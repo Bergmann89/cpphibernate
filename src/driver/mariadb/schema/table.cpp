@@ -530,7 +530,7 @@ std::string build_init_stage1_query(const table_t& table)
                 <<  field_info.table_name
                 <<  "_index_"
                 <<  field_info.field_name
-                <<  "` UNSIGNED INT NOT NULL,";
+                <<  "` INT UNSIGNED NOT NULL,";
         }
     }
 
@@ -1281,6 +1281,7 @@ void table_t::read_exec(const read_context& context) const
         auto& ref_table    = *field.referenced_table;
         auto& ref_field    = *ref_table.primary_key_field;
 
+        {
         std::ostringstream ss;
         ss  <<  "WHERE (`"
             <<  ref_table.table_name
@@ -1296,6 +1297,20 @@ void table_t::read_exec(const read_context& context) const
             <<  ref_field.convert_to_close
             <<  ")";
         next_context.where = ss.str();
+        }
+
+        {
+        std::ostringstream ss;
+        ss  <<  "ORDER BY `"
+            <<  ref_table.table_name
+            <<  "`.`"
+            <<  field.table_name
+            <<  "_index_"
+            <<  field.field_name
+            <<  "` ASC";
+        next_context.order_by = ss.str();
+        }
+
         ref_table.read(next_context);
     }
 }
