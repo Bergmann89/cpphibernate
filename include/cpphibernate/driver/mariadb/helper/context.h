@@ -195,5 +195,24 @@ beg_namespace_cpphibernate_driver_mariadb
 
     using read_context_ptr = std::unique_ptr<read_context>;
 
+    /* destroy_context */
+
+    struct destroy_context
+        : public data_context
+    {
+        std::string where;
+
+        template<typename T_data>
+        inline destroy_context(
+                T_data&                     p_data,
+                const schema_t&             p_schema,
+                ::cppmariadb::connection&   p_connection)
+            : data_context(
+                p_data,
+                p_schema,
+                p_connection)
+            { }
+    };
+
 }
 end_namespace_cpphibernate_driver_mariadb

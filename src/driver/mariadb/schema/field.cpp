@@ -176,13 +176,12 @@ throw_not_implemented(::cppmariadb::statement&, get_statement_foreign_many_updat
     {
         if (!known)
         {
+            auto& ref_table    = *referenced_table;
             auto& key_info     = *table->primary_key_field;
-            auto& ref_key_info = *referenced_table->primary_key_field;
+            auto& ref_key_info = *ref_table.primary_key_field;
 
             std::ostringstream os;
-            os  <<  "DELETE FROM `"
-                <<  ref_key_info.table_name
-                <<  "` WHERE `"
+            os  <<  "WHERE `"
                 <<  ref_key_info.field_name
                 <<  "` IN (SELECT `"
                 <<  ref_key_info.table_name
@@ -205,7 +204,10 @@ throw_not_implemented(::cppmariadb::statement&, get_statement_foreign_many_updat
                 <<  "?\?"
                 <<  ref_key_info.convert_to_close
                 <<  ")";
-            known.reset(new ::cppmariadb::statement(os.str()));
+
+            auto where = os.str();
+            auto query = ref_table.build_delete_query(&where);
+            known.reset(new ::cppmariadb::statement(query));
         }
         return *known;
     }
@@ -213,13 +215,12 @@ throw_not_implemented(::cppmariadb::statement&, get_statement_foreign_many_updat
     {
         if (!unknown)
         {
+            auto& ref_table    = *referenced_table;
             auto& key_info     = *table->primary_key_field;
-            auto& ref_key_info = *referenced_table->primary_key_field;
+            auto& ref_key_info = *ref_table.primary_key_field;
 
             std::ostringstream os;
-            os  <<  "DELETE FROM `"
-                <<  ref_key_info.table_name
-                <<  "` WHERE `"
+            os  <<  "WHERE `"
                 <<  ref_key_info.field_name
                 <<  "` IN (SELECT `"
                 <<  ref_key_info.table_name
@@ -234,7 +235,10 @@ throw_not_implemented(::cppmariadb::statement&, get_statement_foreign_many_updat
                 <<  "?\?"
                 <<  key_info.convert_to_close
                 <<  ")";
-            unknown.reset(new ::cppmariadb::statement(os.str()));
+
+            auto where = os.str();
+            auto query = ref_table.build_delete_query(&where);
+            unknown.reset(new ::cppmariadb::statement(query));
         }
         return *unknown;
     }

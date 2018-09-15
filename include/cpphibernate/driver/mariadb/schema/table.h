@@ -67,7 +67,9 @@ beg_namespace_cpphibernate_driver_mariadb
         const table_t* get_derived_by_table_id(size_t id) const;
         const table_t* get_derived_by_dataset_id(size_t id) const;
 
-        virtual void emplace(const read_context& context) const;
+        virtual void       emplace              (const read_context& context) const;
+               std::string get_where_primary_key(const data_context& context) const;
+               std::string build_delete_query   (const std::string* where) const;
 
         /* CRUD */
         inline void init_stage1(const init_context& context) const
@@ -81,6 +83,9 @@ beg_namespace_cpphibernate_driver_mariadb
 
         inline void read(const read_context& context) const
             { return read_exec(context); }
+
+        inline void destroy(const destroy_context& context) const
+            { return destroy_intern(context); }
 
     private:
         template<typename T_schema, typename T_table, typename T_base_dataset>
@@ -100,6 +105,7 @@ beg_namespace_cpphibernate_driver_mariadb
         mutable statement_map _statement_select_dynamic;
         mutable statement_map _statement_update;
         mutable statement_ptr _statement_foreign_many_delete;
+        mutable statement_ptr _statement_delete;
 
         ::cppmariadb::statement& get_statement_create_table() const;
         ::cppmariadb::statement* get_statement_alter_table() const;
@@ -107,6 +113,9 @@ beg_namespace_cpphibernate_driver_mariadb
         ::cppmariadb::statement& get_statement_select(const read_context& context) const;
         ::cppmariadb::statement& get_statement_update(const filter_t& filter, const field_t* owner) const;
         ::cppmariadb::statement& get_statement_foreign_many_delete() const;
+        ::cppmariadb::statement& get_statement_delete() const;
+
+        void execute_foreign_many_delete(const base_context& context) const;
 
         std::string execute_create_update(
             const create_update_context&    context,
@@ -122,6 +131,10 @@ beg_namespace_cpphibernate_driver_mariadb
                 std::string create_update_exec  (const create_update_context& context) const;
 
                 void        read_exec           (const read_context& context) const;
+
+        virtual void        destroy_intern      (const destroy_context& context) const;
+                void        destroy_exec        (const destroy_context& context) const;
+                void        destroy_cleanup     (const base_context& context, bool check_derived, bool check_base) const;
     };
 
     /* table_simple_t */
@@ -177,6 +190,7 @@ beg_namespace_cpphibernate_driver_mariadb
 
     protected:
         virtual std::string create_update_intern(const create_update_context& context) const override;
+        virtual void        destroy_intern      (const destroy_context& context) const override;
 
     private:
         virtual std::string create_update_base(const create_update_context& context) const override;

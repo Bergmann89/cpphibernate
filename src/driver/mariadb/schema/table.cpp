@@ -443,6 +443,160 @@ struct select_query_builder_t
     }
 };
 
+/* delete_query_builder_t */
+
+struct delete_query_builder_t
+{
+    const table_t&          _table;
+
+    size_t                  alias_id { 0 };
+    std::ostringstream      os;
+    std::list<std::string>  names;
+
+    delete_query_builder_t(
+        const table_t& p_table)
+        : _table     (p_table)
+        { }
+
+    inline std::string make_alias()
+        { return std::string("T") + std::to_string(alias_id++); }
+
+    inline void add_table(const table_t& table, const std::string& alias, bool add_base, bool add_derived)
+    {
+        auto has_alias  = !alias.empty();
+        auto real_alias = has_alias ? alias : table.table_name;
+
+        if (table.base_table && add_base)
+        {
+            assert(table.base_table->primary_key_field);
+
+            auto& base_table      = *table.base_table;
+            auto& base_key        = *base_table.primary_key_field;
+            auto  base_alias      = has_alias ? make_alias() : std::string();
+            auto  real_base_alias = has_alias ? base_alias : base_table.table_name;
+
+            os  <<  " LEFT JOIN `"
+                <<  base_table.table_name;
+            if (has_alias)
+            {
+                os  <<  "` AS `"
+                    <<  base_alias;
+            }
+            os  <<  "` ON `"
+                <<  real_alias
+                <<  "`.`"
+                <<  base_key.field_name
+                <<  "`=`"
+                <<  real_base_alias
+                <<  "`.`"
+                <<  base_key.field_name
+                <<  "`";
+
+            add_table(base_table, base_alias, true, false);
+        }
+
+        names.emplace_back(real_alias);
+
+        /* foreign table one */
+        for (auto& ptr : table.foreign_table_one_fields)
+        {
+            assert(ptr);
+            assert(ptr->referenced_table);
+            assert(ptr->referenced_table->primary_key_field);
+
+            auto& field     = *ptr;
+            auto& ref_table = *field.referenced_table;
+            auto& ref_key   = *ref_table.primary_key_field;
+            auto new_alias  = make_alias();
+
+            os  <<  " LEFT JOIN `"
+                <<  ref_table.table_name
+                <<  "` AS `"
+                <<  new_alias
+                <<  "` ON `"
+                <<  real_alias
+                <<  "`.`"
+                <<  ref_key.table_name
+                <<  "_id_"
+                <<  field.field_name
+                <<  "`=`"
+                <<  new_alias
+                <<  "`.`"
+                <<  ref_key.field_name
+                <<  "`";
+
+            add_table(ref_table, new_alias, true, true);
+        }
+
+        /* derived tables */
+        if (add_derived)
+        {
+            for (auto& ptr : table.derived_tables)
+            {
+                assert(ptr);
+                assert(ptr->primary_key_field);
+
+                auto& derived_table      = *ptr;
+                auto& primary_key        = *table.primary_key_field;
+                auto  derived_alias      = has_alias ? make_alias() : std::string();
+                auto  real_derived_alias = has_alias ? derived_alias : derived_table.table_name;
+
+                os  <<  " LEFT JOIN `"
+                    <<  derived_table.table_name;
+                if (has_alias)
+                {
+                    os  <<  "` AS `"
+                        <<  derived_alias;
+                }
+                os  <<  "` ON `"
+                    <<  real_alias
+                    <<  "`.`"
+                    <<  primary_key.field_name
+                    <<  "`=`"
+                    <<  real_derived_alias
+                    <<  "`.`"
+                    <<  primary_key.field_name
+                    <<  "`";
+
+                add_table(derived_table, derived_alias, false, true);
+            }
+        }
+    }
+
+    inline std::string operator()(const std::string* where)
+    {
+        os  <<  " FROM `"
+            <<  _table.table_name
+            <<  "`";
+        add_table(_table, "", true, true);
+        if (where)
+        {
+            os << " " << *where;
+        }
+        else
+        {
+            os << " ?where!";
+        }
+
+        std::ostringstream ss;
+        ss  <<  "DELETE ";
+        bool first = true;
+        for (auto& name : names)
+        {
+            if (first)
+                first = false;
+            else
+                ss << ", ";
+            ss  <<  "`"
+                <<  name
+                <<  "`";
+        }
+        ss << os.str();
+
+        return ss.str();
+    }
+};
+
 /* build queries */
 
 std::string build_init_stage1_query(const table_t& table)
@@ -686,7 +840,7 @@ std::string build_init_stage2_query(const table_t& table)
             <<  indent
             <<  "ON DELETE CASCADE"
             <<  indent
-            <<  "ON UPDATE NO ACTION"
+            <<  "ON UPDATE CASCADE"
             <<  decindent;
     }
 
@@ -723,7 +877,7 @@ std::string build_init_stage2_query(const table_t& table)
             <<  ref_key_info.field_name
             <<  "`)"
             <<  indent
-            <<  "ON DELETE CASCADE"
+            <<  "ON DELETE SET NULL"
             <<  indent
             <<  "ON UPDATE NO ACTION"
             <<  decindent;
@@ -1143,9 +1297,7 @@ std::string table_t::execute_create_update(
         /* delete non referenced elements */
         if (context.is_update)
         {
-            auto& delete_statement = ref_table.get_statement_foreign_many_delete();
-            cpphibernate_debug_log("execute DELETE old foreign many query: " << delete_statement.query(connection));
-            connection.execute(delete_statement);
+            ref_table.execute_foreign_many_delete(context);
         }
     }
 
@@ -1220,6 +1372,31 @@ const table_t* table_t::get_derived_by_dataset_id(size_t id) const
 void table_t::emplace(const read_context& context) const
     { throw misc::hibernate_exception(std::string("'") + table_name + "' does not implement the emplace() method!"); }
 
+std::string table_t::get_where_primary_key(const data_context& context) const
+{
+    assert(primary_key_field);
+
+    auto& field       = *primary_key_field;
+    auto  primary_key = *field.get(context);
+
+    std::ostringstream os;
+    os  <<  "WHERE `"
+        <<  field.table_name
+        <<  "`.`"
+        <<  field.field_name
+        <<  "`="
+        <<  field.convert_to_open
+        <<  "'"
+        <<  context.connection.escape(primary_key)
+        <<  "'"
+        <<  field.convert_to_close;
+
+    return os.str();
+}
+
+std::string table_t::build_delete_query(const std::string* where) const
+    { return delete_query_builder_t(*this)(where); }
+
 ::cppmariadb::statement& table_t::get_statement_create_table() const
 {
     if (_statement_create_table)
@@ -1282,10 +1459,8 @@ void table_t::emplace(const read_context& context) const
     if (!_statement_foreign_many_delete)
     {
         std::ostringstream os;
-        os  <<  "DELETE FROM `"
-            <<  table_name
-            <<  "` WHERE";
         auto first = true;
+        os << "WHERE";
         for (auto ptr : foreign_key_fields)
         {
             assert(ptr);
@@ -1300,9 +1475,30 @@ void table_t::emplace(const read_context& context) const
                 <<  field.field_name
                 <<  "` IS NULL)";
         }
-        _statement_foreign_many_delete.reset(new ::cppmariadb::statement(os.str()));
+        std::string where = os.str();
+
+        auto query = delete_query_builder_t(*this)(&where);
+        _statement_foreign_many_delete.reset(new ::cppmariadb::statement(query));
     }
     return *_statement_foreign_many_delete;
+}
+
+::cppmariadb::statement& table_t::get_statement_delete() const
+{
+    if (!_statement_delete)
+    {
+        auto query = delete_query_builder_t(*this)(nullptr);
+        _statement_delete.reset(new ::cppmariadb::statement(query));
+    }
+    return *_statement_delete;
+}
+
+void table_t::execute_foreign_many_delete(const base_context& context) const
+{
+    auto& connection = context.connection;
+    auto& statement  = get_statement_foreign_many_delete();
+    cpphibernate_debug_log("execute DELETE old foreign many query: " << statement.query(connection));
+    connection.execute(statement);
 }
 
 std::string table_t::create_update_base(const create_update_context& context) const
@@ -1328,6 +1524,9 @@ void table_t::init_stage2_exec(const init_context& context) const
     connection.execute(*statement);
 }
 
+std::string table_t::create_update_intern(const create_update_context& context) const
+    { return create_update_exec(context); }
+
 std::string table_t::create_update_exec(const create_update_context& context) const
 {
     auto& statement = context.is_update
@@ -1335,9 +1534,6 @@ std::string table_t::create_update_exec(const create_update_context& context) co
         : get_statement_insert_into();
     return execute_create_update(context, statement);
 }
-
-std::string table_t::create_update_intern(const create_update_context& context) const
-    { return create_update_exec(context); }
 
 void table_t::read_exec(const read_context& context) const
 {
@@ -1400,5 +1596,59 @@ void table_t::read_exec(const read_context& context) const
         }
 
         ref_table.read(next_context);
+    }
+}
+
+void table_t::destroy_intern(const destroy_context& context) const
+    { return destroy_exec(context); }
+
+void table_t::destroy_exec(const destroy_context& context) const
+{
+    assert(primary_key_field);
+
+    auto& connection = context.connection;
+    auto& statement  = get_statement_delete();
+
+    statement.set(0, context.where);
+    cpphibernate_debug_log("execute DELETE query: " << statement.query(connection));
+    connection.execute(statement);
+
+    destroy_cleanup(context, false, true);
+}
+
+void table_t::destroy_cleanup(const base_context& context, bool check_derived, bool check_base) const
+{
+    for (auto ptr : foreign_table_many_fields)
+    {
+        assert(ptr);
+        assert(ptr->referenced_table);
+
+        auto& ref_table = *ptr->referenced_table;
+
+        ref_table.execute_foreign_many_delete(context);
+    }
+
+    for (auto ptr : foreign_table_fields)
+    {
+        assert(ptr);
+        assert(ptr->referenced_table);
+
+        auto& ref_table = *ptr->referenced_table;
+
+        ref_table.destroy_cleanup(context, true, true);
+    }
+
+    if (check_base && base_table)
+    {
+        base_table->destroy_cleanup(context, false, true);
+    }
+
+    if (check_derived)
+    {
+        for (auto ptr : derived_tables)
+        {
+            assert(ptr);
+            ptr->destroy_cleanup(context, true, false);
+        }
     }
 }

@@ -65,6 +65,36 @@ beg_namespace_cpphibernate_driver_mariadb
     }
 
     template<typename T_schema, typename T_table, typename T_base_dataset>
+    void table_polymorphic_t<T_schema, T_table, T_base_dataset>
+        ::destroy_intern(const destroy_context& context) const
+    {
+        bool  done    = false;
+        auto& dataset = context.get<dataset_type>();
+        for_each_derived(dataset, hana::false_c, [&](auto& derived_dataset){
+            if (!done)
+            {
+                using derived_dataset_type  = mp::decay_t<decltype(derived_dataset)>;
+                auto  derived_dataset_id    = misc::get_type_id(hana::type_c<derived_dataset_type>);
+                auto  derived_table         = this->get_derived_by_dataset_id(derived_dataset_id);
+                if (!derived_table)
+                {
+                    throw misc::hibernate_exception(static_cast<std::ostringstream&>(std::ostringstream { }
+                        << "unable to find derived table info for dataset '"
+                        << utl::type_helper<derived_dataset_type>::name() << "'!").str());
+                }
+                auto new_context = change_context(context, derived_dataset);
+                derived_table->destroy(new_context);
+                done = true;
+            }
+        });
+
+        if (!done)
+        {
+            this->destroy_exec(context);
+        }
+    }
+
+    template<typename T_schema, typename T_table, typename T_base_dataset>
     std::string table_polymorphic_t<T_schema, T_table, T_base_dataset>
         ::create_update_base(const create_update_context& context) const
     {

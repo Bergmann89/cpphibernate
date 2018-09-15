@@ -153,7 +153,9 @@ TEST(CppHibernateTests, update_derived1)
                             "`u32_ptr_u`=null, "
                             "`u32_ptr_s`='X789X'",
                         result_affected_rows(1));
-    expect_query(mock,  "DELETE FROM "
+    expect_query(mock,  "DELETE "
+                            "`tbl_test1` "
+                        "FROM "
                             "`tbl_test1` "
                         "WHERE "
                             "`tbl_test1_id` IN ("
@@ -224,7 +226,9 @@ TEST(CppHibernateTests, update_derived2)
                         "WHERE "
                             "`tbl_test2_id`=UuidToBin('X3d1283a6-abb9-11e8-98d0-529269fb1459X')",
                         result_affected_rows(1));
-    expect_query(mock,  "DELETE FROM "
+    expect_query(mock,  "DELETE "
+                            "`tbl_test2` "
+                        "FROM "
                             "`tbl_test2` "
                         "WHERE "
                             "`tbl_test2_id` IN ("
@@ -249,7 +253,9 @@ TEST(CppHibernateTests, update_derived2)
                             "`u16_data`='X22X', "
                             "`i16_data`='X23X'",
                         result_affected_rows(1));
-    expect_query(mock,  "DELETE FROM "
+    expect_query(mock,  "DELETE "
+                            "`tbl_test2` "
+                        "FROM "
                             "`tbl_test2` "
                         "WHERE "
                             "`tbl_test2_id` IN ("
@@ -261,7 +267,9 @@ TEST(CppHibernateTests, update_derived2)
                                     "`tbl_derived2_id`=UuidToBin('X3d127bcc-abb9-11e8-98d0-529269fb1459X') AND "
                                     "`tbl_test2_id_test2_ptr_u`!= UuidToBin('Xec0f0aac-b8b9-11e8-96f8-529269fb1459X')"
                             ")");
-    expect_query(mock,  "DELETE FROM "
+    expect_query(mock,  "DELETE "
+                            "`tbl_test2` "
+                        "FROM "
                             "`tbl_test2` "
                         "WHERE "
                             "`tbl_test2_id` IN ("
@@ -328,7 +336,9 @@ TEST(CppHibernateTests, update_derived3)
                         "WHERE "
                             "`tbl_base_id`=UuidToBin('X3d1288ce-abb9-11e8-98d0-529269fb1459X')",
                         result_affected_rows(1));
-    expect_query(mock,  "DELETE FROM "
+    expect_query(mock,  "DELETE "
+                            "`tbl_test2` "
+                        "FROM "
                             "`tbl_test2` "
                         "WHERE "
                             "`tbl_test2_id` IN ("
@@ -339,7 +349,9 @@ TEST(CppHibernateTests, update_derived3)
                                 "WHERE "
                                     "`tbl_derived2_id`=UuidToBin('X3d1287a2-abb9-11e8-98d0-529269fb1459X')"
                             ")");
-    expect_query(mock,  "DELETE FROM "
+    expect_query(mock,  "DELETE "
+                            "`tbl_test2` "
+                        "FROM "
                             "`tbl_test2` "
                         "WHERE "
                             "`tbl_test2_id` IN ("
@@ -350,7 +362,9 @@ TEST(CppHibernateTests, update_derived3)
                                 "WHERE "
                                     "`tbl_derived2_id`=UuidToBin('X3d1287a2-abb9-11e8-98d0-529269fb1459X')"
                             ")");
-    expect_query(mock,  "DELETE FROM "
+    expect_query(mock,  "DELETE "
+                            "`tbl_test2` "
+                        "FROM "
                             "`tbl_test2` "
                         "WHERE "
                             "`tbl_test2_id` IN ("
@@ -414,7 +428,9 @@ TEST(CppHibernateTests, update_derived3)
                             "`u64_data`='X112X', "
                             "`i64_data`='X113X'",
                         result_affected_rows(1));
-    expect_query(mock,  "DELETE FROM "
+    expect_query(mock,  "DELETE "
+                            "`tbl_test3` "
+                        "FROM "
                             "`tbl_test3` "
                         "WHERE "
                             "(`tbl_derived3_id_test3_list` IS NULL) AND "
@@ -467,7 +483,9 @@ TEST(CppHibernateTests, update_derived3)
                         "WHERE "
                             "`tbl_test3_id`=UuidToBin('X3d129134-abb9-11e8-98d0-529269fb1459X')",
                         result_affected_rows(1));
-    expect_query(mock,  "DELETE FROM "
+    expect_query(mock,  "DELETE "
+                            "`tbl_test3` "
+                        "FROM "
                             "`tbl_test3` "
                         "WHERE "
                             "(`tbl_derived3_id_test3_list` IS NULL) AND "

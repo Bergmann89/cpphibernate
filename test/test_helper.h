@@ -64,8 +64,8 @@ struct result_data
 
 inline MYSQL_RES* next_result()
 {
-    static MYSQL_RES* value = reinterpret_cast<MYSQL_RES*>(0x1000);
-    return ++value;
+    static size_t value = 0x2000;
+    return reinterpret_cast<MYSQL_RES*>(value++);
 }
 
 inline const result_data::data_type& empty_result_data()

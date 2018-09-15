@@ -168,11 +168,11 @@ TEST(CppHibernateTests, init)
                         "        FOREIGN KEY (`tbl_base_id`)\n"
                         "        REFERENCES `test`.`tbl_base` (`tbl_base_id`)\n"
                         "        ON DELETE CASCADE\n"
-                        "        ON UPDATE NO ACTION,\n"
+                        "        ON UPDATE CASCADE,\n"
                         "    ADD CONSTRAINT `fk_tbl_derived1_to_tbl_test1_id_test1_data`\n"
                         "        FOREIGN KEY (`tbl_test1_id_test1_data`)\n"
                         "        REFERENCES `test`.`tbl_test1` (`tbl_test1_id`)\n"
-                        "        ON DELETE CASCADE\n"
+                        "        ON DELETE SET NULL\n"
                         "        ON UPDATE NO ACTION");
 
     expect_query(mock,  "ALTER TABLE `tbl_derived2`\n"
@@ -180,21 +180,21 @@ TEST(CppHibernateTests, init)
                         "        FOREIGN KEY (`tbl_base_id`)\n"
                         "        REFERENCES `test`.`tbl_base` (`tbl_base_id`)\n"
                         "        ON DELETE CASCADE\n"
-                        "        ON UPDATE NO ACTION,\n"
+                        "        ON UPDATE CASCADE,\n"
                         "    ADD CONSTRAINT `fk_tbl_derived2_to_tbl_test2_id_test2_nullable`\n"
                         "        FOREIGN KEY (`tbl_test2_id_test2_nullable`)\n"
                         "        REFERENCES `test`.`tbl_test2` (`tbl_test2_id`)\n"
-                        "        ON DELETE CASCADE\n"
+                        "        ON DELETE SET NULL\n"
                         "        ON UPDATE NO ACTION,\n"
                         "    ADD CONSTRAINT `fk_tbl_derived2_to_tbl_test2_id_test2_ptr_u`\n"
                         "        FOREIGN KEY (`tbl_test2_id_test2_ptr_u`)\n"
                         "        REFERENCES `test`.`tbl_test2` (`tbl_test2_id`)\n"
-                        "        ON DELETE CASCADE\n"
+                        "        ON DELETE SET NULL\n"
                         "        ON UPDATE NO ACTION,\n"
                         "    ADD CONSTRAINT `fk_tbl_derived2_to_tbl_test2_id_test2_ptr_s`\n"
                         "        FOREIGN KEY (`tbl_test2_id_test2_ptr_s`)\n"
                         "        REFERENCES `test`.`tbl_test2` (`tbl_test2_id`)\n"
-                        "        ON DELETE CASCADE\n"
+                        "        ON DELETE SET NULL\n"
                         "        ON UPDATE NO ACTION");
 
     expect_query(mock,  "ALTER TABLE `tbl_derived3`\n"
@@ -202,7 +202,7 @@ TEST(CppHibernateTests, init)
                         "        FOREIGN KEY (`tbl_derived2_id`)\n"
                         "        REFERENCES `test`.`tbl_derived2` (`tbl_derived2_id`)\n"
                         "        ON DELETE CASCADE\n"
-                        "        ON UPDATE NO ACTION");
+                        "        ON UPDATE CASCADE");
 
     expect_query(mock,  "COMMIT");
 

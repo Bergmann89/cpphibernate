@@ -65,6 +65,21 @@ beg_namespace_cpphibernate_driver_mariadb
             create_update_impl_t<T_dataset>::apply(
                 create_update_context(dataset, _schema, _connection, _filter, true));
         }
+
+        template<typename T_dataset>
+        inline void destroy_impl(T_dataset& dataset) const
+        {
+            using dataset_type      = mp::decay_t<T_dataset>;
+            using real_dataset_type = misc::real_dataset_t<dataset_type>;
+
+            auto  dataset_id = misc::get_type_id(hana::type_c<real_dataset_type>);
+            auto& table      = _schema.table(dataset_id);
+
+            destroy_context context(dataset, _schema, _connection);
+            context.where = table.get_where_primary_key(context);
+
+            destroy_impl_t<T_dataset>::apply(context);
+        }
     };
 
 }
