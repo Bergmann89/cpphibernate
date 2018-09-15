@@ -32,7 +32,7 @@ beg_namespace_cpphibernate_driver_mariadb
                 if (!strict)
                 {
                     auto update_context = context;
-                    update_context.is_update = true;
+                    update_context.is_update = !update_context.is_update;
                     ret = table.create_update(update_context);
                 }
                 else if (context.is_update)

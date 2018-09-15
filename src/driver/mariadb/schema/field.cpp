@@ -159,3 +159,115 @@ throw_not_implemented(bool,     is_default, const data_context& context)
 throw_not_implemented(string,   generate_value, ::cppmariadb::connection&)
 throw_not_implemented(value_t,  get, const data_context& context)
 throw_not_implemented(void,     set, const data_context& context, const value_t&)
+
+/* statements */
+
+throw_not_implemented(::cppmariadb::statement&, get_statement_foreign_one_delete, bool)
+throw_not_implemented(::cppmariadb::statement&, get_statement_foreign_many_update)
+
+::cppmariadb::statement& field_t::get_statement_foreign_one_delete_impl(bool key_known, statement_ptr& known, statement_ptr& unknown) const
+{
+    assert(table);
+    assert(table->primary_key_field);
+    assert(referenced_table);
+    assert(referenced_table->primary_key_field);
+
+    if (key_known)
+    {
+        if (!known)
+        {
+            auto& key_info     = *table->primary_key_field;
+            auto& ref_key_info = *referenced_table->primary_key_field;
+
+            std::ostringstream os;
+            os  <<  "DELETE FROM `"
+                <<  ref_key_info.table_name
+                <<  "` WHERE `"
+                <<  ref_key_info.field_name
+                <<  "` IN (SELECT `"
+                <<  ref_key_info.table_name
+                <<  "_id_"
+                <<  field_name
+                <<  "` FROM `"
+                <<  key_info.table_name
+                <<  "` WHERE `"
+                <<  key_info.field_name
+                <<  "`="
+                <<  key_info.convert_to_open
+                <<  "?\?"
+                <<  key_info.convert_to_close
+                <<  " AND `"
+                <<  ref_key_info.table_name
+                <<  "_id_"
+                <<  field_name
+                <<  "`!= "
+                <<  ref_key_info.convert_to_open
+                <<  "?\?"
+                <<  ref_key_info.convert_to_close
+                <<  ")";
+            known.reset(new ::cppmariadb::statement(os.str()));
+        }
+        return *known;
+    }
+    else
+    {
+        if (!unknown)
+        {
+            auto& key_info     = *table->primary_key_field;
+            auto& ref_key_info = *referenced_table->primary_key_field;
+
+            std::ostringstream os;
+            os  <<  "DELETE FROM `"
+                <<  ref_key_info.table_name
+                <<  "` WHERE `"
+                <<  ref_key_info.field_name
+                <<  "` IN (SELECT `"
+                <<  ref_key_info.table_name
+                <<  "_id_"
+                <<  field_name
+                <<  "` FROM `"
+                <<  key_info.table_name
+                <<  "` WHERE `"
+                <<  key_info.field_name
+                <<  "`="
+                <<  key_info.convert_to_open
+                <<  "?\?"
+                <<  key_info.convert_to_close
+                <<  ")";
+            unknown.reset(new ::cppmariadb::statement(os.str()));
+        }
+        return *unknown;
+    }
+}
+
+::cppmariadb::statement& field_t::get_statement_foreign_many_update_impl(statement_ptr& statement) const
+{
+    assert(referenced_table);
+    assert(referenced_table->primary_key_field);
+    if (!statement)
+    {
+        auto& ref_key_info = *referenced_table->primary_key_field;
+
+        std::ostringstream os;
+        os  <<  "UPDATE `"
+            <<  ref_key_info.table_name
+            <<  "` SET `"
+            <<  ref_key_info.table_name
+            <<  "_id_"
+            <<  field_name
+            <<  "`=NULL, `"
+            <<  ref_key_info.table_name
+            <<  "_index_"
+            <<  field_name
+            <<  "`=0 WHERE `"
+            <<  ref_key_info.table_name
+            <<  "_id_"
+            <<  field_name
+            <<  "`="
+            <<  ref_key_info.convert_to_open
+            <<  "?\?"
+            <<  ref_key_info.convert_to_close;
+        statement.reset(new ::cppmariadb::statement(os.str()));
+    }
+    return *statement;
+}

@@ -12,6 +12,8 @@ beg_namespace_cpphibernate_driver_mariadb
     namespace __impl
     {
 
+        /* declaration */
+
         template<typename T, typename = void>
         struct make_read_context_impl
         {
@@ -19,6 +21,8 @@ beg_namespace_cpphibernate_driver_mariadb
             static constexpr decltype(auto) apply(T_args&&... args)
                 { static_assert(sizeof...(args) == -1, "Invalid parameters for mariadb::make_read_context(...)!"); }
         };
+
+        /* normal datasets */
 
         template<typename T_dataset, typename... T_args>
         struct make_read_context_impl<
@@ -68,6 +72,8 @@ beg_namespace_cpphibernate_driver_mariadb
             static constexpr decltype(auto) apply(dataset_type& dataset, T_args&&... args)
                 { return context_impl(dataset, std::forward<T_args>(args)...); }
         };
+
+        /* nullable datasets */
 
         template<typename T_dataset, typename... T_args>
         struct make_read_context_impl<
@@ -130,6 +136,8 @@ beg_namespace_cpphibernate_driver_mariadb
             static constexpr decltype(auto) apply(dataset_type& dataset, T_args&&... args)
                 { return context_impl(dataset, std::forward<T_args>(args)...); }
         };
+
+        /* container datasets */
 
         template<typename T_dataset, typename... T_args>
         struct make_read_context_impl<

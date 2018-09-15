@@ -90,23 +90,27 @@ beg_namespace_cpphibernate_driver_mariadb
         friend struct table_polymorphic_t;
 
         using statement_ptr = std::unique_ptr<::cppmariadb::statement>;
-        using statement_map = std::map<size_t, ::cppmariadb::statement>;
+        using map_key       = std::tuple<size_t, const field_t*>;
+        using statement_map = std::map<map_key, ::cppmariadb::statement>;
 
         mutable statement_ptr _statement_create_table;
         mutable statement_ptr _statement_alter_table;
         mutable statement_ptr _statement_insert_into;
         mutable statement_map _statement_select_static;
         mutable statement_map _statement_select_dynamic;
+        mutable statement_map _statement_update;
+        mutable statement_ptr _statement_foreign_many_delete;
 
         ::cppmariadb::statement& get_statement_create_table() const;
         ::cppmariadb::statement* get_statement_alter_table() const;
         ::cppmariadb::statement& get_statement_insert_into() const;
         ::cppmariadb::statement& get_statement_select(const read_context& context) const;
+        ::cppmariadb::statement& get_statement_update(const filter_t& filter, const field_t* owner) const;
+        ::cppmariadb::statement& get_statement_foreign_many_delete() const;
 
         std::string execute_create_update(
             const create_update_context&    context,
-            ::cppmariadb::statement&        statement,
-            const filter_t*                 filter) const;
+            ::cppmariadb::statement&        statement) const;
 
         virtual std::string create_update_base(const create_update_context& context) const;
 

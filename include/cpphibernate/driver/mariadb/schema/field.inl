@@ -108,6 +108,21 @@ beg_namespace_cpphibernate_driver_mariadb
         }
     }
 
+    template<typename T_field>
+    ::cppmariadb::statement& foreign_table_field_t<T_field>
+        ::get_statement_foreign_one_delete(bool key_known) const
+    {
+        return base_type::get_statement_foreign_one_delete_impl(
+            key_known,
+            _statement_foreign_one_delete_key_known,
+            _statement_foreign_one_delete_key_unknown);
+    }
+
+    template<typename T_field>
+    ::cppmariadb::statement& foreign_table_field_t<T_field>
+        ::get_statement_foreign_many_update() const
+        { return base_type::get_statement_foreign_many_update_impl(_statement_foreign_many_update); }
+
     namespace __impl
     {
 

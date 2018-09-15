@@ -910,8 +910,9 @@ std::string build_create_update_query(const table_t& table, const filter_t* filt
     }
 
     /* type field for derived tables */
-    if (!table.derived_tables.empty() &&
-        !table.base_table)
+    if (   !table.derived_tables.empty()
+        && !table.base_table
+        && !is_update)
     {
         if (index++)
             os << ", ";
@@ -948,13 +949,13 @@ std::string build_select_query(
 
 std::string table_t::execute_create_update(
     const create_update_context&    context,
-    ::cppmariadb::statement&        statement,
-    const filter_t*                 filter) const
+    ::cppmariadb::statement&        statement) const
 {
     auto& connection = context.connection;
+    auto& filter     = context.filter;
 
     size_t  index       = 0;
-    bool    is_update   = static_cast<bool>(filter);
+    bool    is_update   = context.is_update;
 
     std::string primary_key;
     statement.clear();
@@ -976,7 +977,7 @@ std::string table_t::execute_create_update(
     /* base_key */
     if (    base_table
         && (   !is_update
-            || !filter->is_excluded(*base_table)))
+            || !filter.is_excluded(*base_table)))
     {
         auto new_context = context;
         if (!new_context.derived_table)
@@ -986,19 +987,37 @@ std::string table_t::execute_create_update(
         ++index;
     }
 
-    if (is_update && filter->is_excluded(*this))
+    if (is_update && filter.is_excluded(*this))
         return primary_key;
 
     /* foreign table one fields */
     for (auto& ptr : foreign_table_one_fields)
     {
         assert(ptr);
-        if (is_update && filter->is_excluded(*ptr))
+        auto& field = *ptr;
+        if (is_update && filter.is_excluded(field))
             continue;
-        value_t key = ptr->foreign_create_update(context);
-        if (key.has_value())    statement.set(index, std::move(key));
-        else                    statement.set_null(index);
+
+        /* insert/update dataset */
+        value_t key = field.foreign_create_update(context);
+        if (key.has_value())
+            statement.set(index, std::move(key));
+        else if (field.value_is_nullable)
+            statement.set_null(index);
+        else
+            throw misc::hibernate_exception("Received null key for non nullable foreign dataset!");
         ++index;
+
+        /* cleanup old dataset (if new one was created) */
+        if (context.is_update)
+        {
+            auto& delete_statement = field.get_statement_foreign_one_delete(key.has_value());
+            delete_statement.set(0, primary_key);
+            if (key.has_value())
+                delete_statement.set(1, *key);
+            cpphibernate_debug_log("execute DELETE old foreign one query: " << delete_statement.query(connection));
+            connection.execute(delete_statement);
+        }
     }
 
     /* foreign fields */
@@ -1036,7 +1055,7 @@ std::string table_t::execute_create_update(
     for (auto& ptr : data_fields)
     {
         assert(ptr);
-        if (is_update && filter->is_excluded(*ptr))
+        if (is_update && filter.is_excluded(*ptr))
             continue;
 
         auto& field_info = *ptr;
@@ -1048,8 +1067,9 @@ std::string table_t::execute_create_update(
     }
 
     /* type field for derived tables */
-    if (!derived_tables.empty() &&
-        !base_table)
+    if (   !derived_tables.empty()
+        && !base_table
+        && !is_update)
     {
         statement.set(index, context.derived_table
             ? context.derived_table->table_id
@@ -1084,6 +1104,8 @@ std::string table_t::execute_create_update(
     else
     {
         auto count = connection.execute_rows(statement);
+        if (count != 1)
+            throw misc::hibernate_exception("Expected exaclty one row to be inserted/updated!");
         cpphibernate_debug_log(count << " rows inserted/updated");
     }
     primary_key_field->set(context, primary_key);
@@ -1092,16 +1114,39 @@ std::string table_t::execute_create_update(
     for (auto& ptr : foreign_table_many_fields)
     {
         assert(ptr);
+        assert(ptr->referenced_table);
+
+        auto& field     = *ptr;
+        auto& ref_table = *field.referenced_table;
+
         if (    is_update
-            && (    filter->is_excluded(*ptr)
-                ||  filter->is_excluded(*ptr->referenced_table)))
+            && (    filter.is_excluded(field)
+                ||  filter.is_excluded(ref_table)))
             continue;
 
+        /* set foreign keys of existing elements to null */
+        if (context.is_update)
+        {
+            auto& update_statement = field.get_statement_foreign_many_update();
+            update_statement.set(0, primary_key);
+            cpphibernate_debug_log("execute UPDATE old foreign many query: " << update_statement.query(connection));
+            connection.execute(update_statement);
+        }
+
+        /* update elements */
         auto next_context = context;
         next_context.owner_field   = ptr;
         next_context.owner_key     = primary_key;
         next_context.derived_table = nullptr;
-        ptr->foreign_create_update(next_context);
+        field.foreign_create_update(next_context);
+
+        /* delete non referenced elements */
+        if (context.is_update)
+        {
+            auto& delete_statement = ref_table.get_statement_foreign_many_delete();
+            cpphibernate_debug_log("execute DELETE old foreign many query: " << delete_statement.query(connection));
+            connection.execute(delete_statement);
+        }
     }
 
     return primary_key;
@@ -1210,13 +1255,54 @@ void table_t::emplace(const read_context& context) const
     auto& map = context.is_dynamic
         ? _statement_select_dynamic
         : _statement_select_static;
-    auto it = map.find(context.filter.cache_id);
+    auto key = std::make_tuple(context.filter.cache_id, static_cast<const field_t*>(nullptr));
+    auto it  = map.find(key);
     if (it == map.end())
     {
         auto query = build_select_query(*this, context.filter, context.is_dynamic);
-        it = map.emplace(context.filter.cache_id, ::cppmariadb::statement(query)).first;
+             it    = map.emplace(key, ::cppmariadb::statement(query)).first;
     }
     return it->second;
+}
+
+::cppmariadb::statement& table_t::get_statement_update(const filter_t& filter, const field_t* owner) const
+{
+    auto key = std::make_tuple(filter.cache_id, owner);
+    auto it  = _statement_update.find(key);
+    if (it == _statement_update.end())
+    {
+        auto query = build_create_update_query(*this, &filter, owner);
+             it    = _statement_update.emplace(key, ::cppmariadb::statement(query)).first;
+    }
+    return it->second;
+}
+
+::cppmariadb::statement& table_t::get_statement_foreign_many_delete() const
+{
+    if (!_statement_foreign_many_delete)
+    {
+        std::ostringstream os;
+        os  <<  "DELETE FROM `"
+            <<  table_name
+            <<  "` WHERE";
+        auto first = true;
+        for (auto ptr : foreign_key_fields)
+        {
+            assert(ptr);
+            auto& field = *ptr;
+            if (first)
+                first = false;
+            else
+                os << " AND";
+            os  <<  " (`"
+                <<  field.table_name
+                <<  "_id_"
+                <<  field.field_name
+                <<  "` IS NULL)";
+        }
+        _statement_foreign_many_delete.reset(new ::cppmariadb::statement(os.str()));
+    }
+    return *_statement_foreign_many_delete;
 }
 
 std::string table_t::create_update_base(const create_update_context& context) const
@@ -1244,8 +1330,10 @@ void table_t::init_stage2_exec(const init_context& context) const
 
 std::string table_t::create_update_exec(const create_update_context& context) const
 {
-    auto& statement = get_statement_insert_into();
-    return execute_create_update(context, statement, nullptr);
+    auto& statement = context.is_update
+        ? get_statement_update(context.filter, context.owner_field)
+        : get_statement_insert_into();
+    return execute_create_update(context, statement);
 }
 
 std::string table_t::create_update_intern(const create_update_context& context) const

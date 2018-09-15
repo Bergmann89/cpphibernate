@@ -17,6 +17,7 @@ beg_namespace_cpphibernate_driver_mariadb
 
     struct field_t
     {
+    public:
         size_t          id                          { 0 };          // unique id of the field
         size_t          dataset_id                  { 0 };          // unique id of the dataset type
         size_t          real_dataset_id             { 0 };          // unique id of the real/unwrapped dataset type
@@ -86,6 +87,16 @@ beg_namespace_cpphibernate_driver_mariadb
         virtual void        set                     (const data_context& context, const value_t&) const;
         virtual bool        is_default              (const data_context& context) const;
         virtual std::string generate_value          (::cppmariadb::connection& connection) const;
+
+        /* statements */
+        virtual ::cppmariadb::statement& get_statement_foreign_one_delete(bool key_known) const;
+        virtual ::cppmariadb::statement& get_statement_foreign_many_update() const;
+
+    protected:
+        using statement_ptr = std::unique_ptr<::cppmariadb::statement>;
+
+        ::cppmariadb::statement& get_statement_foreign_one_delete_impl(bool key_known, statement_ptr& known, statement_ptr& unknown) const;
+        ::cppmariadb::statement& get_statement_foreign_many_update_impl(statement_ptr& statement) const;
     };
 
     /* simple_field_t */
@@ -181,8 +192,20 @@ beg_namespace_cpphibernate_driver_mariadb
         using base_type::base_type;
 
     public:
+        /* CRUD */
         virtual value_t          foreign_create_update(const create_update_context& context) const override;
         virtual read_context_ptr foreign_read         (const read_context& context, bool fake_context) const override;
+
+        /* statements */
+        virtual ::cppmariadb::statement& get_statement_foreign_one_delete(bool key_known) const override;
+        virtual ::cppmariadb::statement& get_statement_foreign_many_update() const override;
+
+    private:
+        using statement_ptr = std::unique_ptr<::cppmariadb::statement>;
+
+        mutable statement_ptr _statement_foreign_one_delete_key_known;
+        mutable statement_ptr _statement_foreign_one_delete_key_unknown;
+        mutable statement_ptr _statement_foreign_many_update;
     };
 
 }

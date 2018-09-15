@@ -58,6 +58,13 @@ beg_namespace_cpphibernate_driver_mariadb
             table.read(context);
             trans.commit();
         }
+
+        template<typename T_dataset>
+        inline void update_impl(T_dataset& dataset) const
+        {
+            create_update_impl_t<T_dataset>::apply(
+                create_update_context(dataset, _schema, _connection, _filter, true));
+        }
     };
 
 }
