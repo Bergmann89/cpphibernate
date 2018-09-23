@@ -1,4 +1,7 @@
+#pragma once
+
 #include <cpphibernate.h>
+#include <cpputils/misc/enum.h>
 
 enum class test_enum
 {

@@ -26,6 +26,20 @@ beg_namespace_cpphibernate_driver_mariadb
         cpphibernate_copyable(mariadb_driver_t, delete);
         cpphibernate_moveable(mariadb_driver_t, default);
 
+        inline const ::cppmariadb::connection& connection() const
+            { return _connection; }
+
+        template<typename... T_args>
+        inline void set_filter_inclusive(T_args&&... args)
+            { _filter.set_inclusive(_schema, std::forward<T_args>(args)...); }
+
+        template<typename... T_args>
+        inline void set_filter_exclusive(T_args&&... args)
+            { _filter.set_exclusive(_schema, std::forward<T_args>(args)...); }
+
+        inline void clear_filter()
+            { _filter.clear(); }
+
     protected:
         inline void init_impl(bool recreate) const
         {

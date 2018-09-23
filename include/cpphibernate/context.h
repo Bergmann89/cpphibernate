@@ -7,7 +7,7 @@
 #include <cpphibernate/schema/table.h>
 #include <cpphibernate/schema/tables.h>
 #include <cpphibernate/modifier/where.h>
-#include <cpphibernate/modifier/modifier.h>
+#include <cpphibernate/modifier/modifiers.h>
 
 beg_namespace_cpphibernate
 {

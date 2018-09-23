@@ -3,8 +3,7 @@
 #include <boost/hana.hpp>
 #include <cpputils/mp/core.h>
 
-#define cpphibernate_debug
-#ifdef cpphibernate_debug
+#ifdef CPPHIBERNATE_DEBUG
 #   include <cpputils/logging/global.h>
 #   define cpphibernate_debug_log(...) log_global_message(debug) << __VA_ARGS__
 #else

@@ -106,11 +106,11 @@ beg_namespace_cpphibernate_driver_mariadb
         : public field_t
     {
         using base_type         = field_t;
-        using field_type        = T_field;
-        using getter_type       = typename mp::decay_t<field_type>::getter_type;
-        using dataset_type      = typename getter_type::dataset_type;
+        using field_type        = mp::decay_t<T_field>;
+        using getter_type       = typename field_type::getter_type;
+        using dataset_type      = mp::decay_t<typename getter_type::dataset_type>;
         using real_dataset_type = misc::real_dataset_t<dataset_type>;
-        using value_type        = typename getter_type::value_type;
+        using value_type        = mp::decay_t<typename getter_type::value_type>;
         using real_value_type   = misc::real_dataset_t<value_type>;
         using type_props        = type_properties<value_type>;
 

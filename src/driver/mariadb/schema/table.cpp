@@ -7,7 +7,7 @@
 
 #include <cpphibernate/misc.h>
 #include <cpphibernate/driver/mariadb/schema/table.h>
-#include <cpphibernate/driver/mariadb/schema/filter.h>
+#include <cpphibernate/driver/mariadb/schema/filter.inl>
 
 using namespace ::utl;
 using namespace ::cpphibernate;

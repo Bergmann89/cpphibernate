@@ -159,42 +159,27 @@ beg_namespace_cpphibernate_schema
 
         /* setter_make_impl */
 
-        template<typename X, typename = void>
         struct setter_make_impl
         {
-            template<typename... Args>
-            static constexpr decltype(auto) apply(Args&&...)
-                { return make_setter_none(); }
-        };
-
-        template<typename T_dataset, typename T_value>
-        struct setter_make_impl<mp::list<T_value T_dataset::*>, void>
-        {
-            static constexpr decltype(auto) apply(T_value T_dataset::*member)
+            template<typename T_dataset, typename T_value>
+            constexpr decltype(auto) operator()(T_value T_dataset::*member) const
                 { return make_setter_member_var(member); }
-        };
 
-        template<typename T_dataset, typename T_value>
-        struct setter_make_impl<mp::list<T_value (T_dataset::*)(void)>, void>
-        {
-            static constexpr decltype(auto) apply(T_value (T_dataset::*member)(void))
+            template<typename T_dataset, typename T_value>
+            constexpr decltype(auto) operator()(void (T_dataset::*member)(T_value)) const
                 { return make_setter_member_func(member); }
-        };
 
-        template<typename T_dataset, typename T_value>
-        struct setter_make_impl<mp::list<T_value (T_dataset::*)(void) const>, void>
-        {
-            static constexpr decltype(auto) apply(T_value (T_dataset::*member)(void) const)
+            template<typename T_dataset, typename T_value>
+            constexpr decltype(auto) operator()(void (T_dataset::*member)(T_value&)) const
                 { return make_setter_member_func(member); }
-        };
 
-        template<typename T_func, typename T_wrapped_dataset, typename T_value_type>
-        struct setter_make_impl<mp::list<T_func, T_wrapped_dataset, T_value_type>, mp::enable_if_c<
-                hana::is_a<hana::type_tag, mp::decay_t<T_wrapped_dataset>>
-            &&  hana::is_a<hana::type_tag, mp::decay_t<T_value_type>>>>
-        {
-            static constexpr decltype(auto) apply(T_func&& func, T_wrapped_dataset&& wrapped_dataset, T_value_type&& value_type)
-                { return make_setter_lambda(std::forward<T_func>(func), std::forward<T_wrapped_dataset>(wrapped_dataset), std::forward<T_value_type>(value_type)); }
+            template<typename T_dataset, typename T_value>
+            constexpr decltype(auto) operator()(void (T_dataset::*member)(T_value&&)) const
+                { return make_setter_member_func(member); }
+
+            template<typename T_func, typename T_dataset, typename T_value>
+            constexpr decltype(auto) operator()(T_func&& func, hana::type<T_dataset>&& wrapped_dataset, hana::type<T_value>&& wrapped_value) const
+                { return make_setter_lambda(std::forward<T_func>(func), std::forward<hana::type<T_dataset>>(wrapped_dataset), std::forward<hana::type<T_value>>(wrapped_value)); }
         };
 
     }
@@ -202,7 +187,7 @@ beg_namespace_cpphibernate_schema
     namespace setter
     {
 
-        constexpr decltype(auto) make = misc::make_generic_predicate<__impl::setter_make_impl> { };
+        constexpr decltype(auto) make = __impl::setter_make_impl { };
 
     }
 

@@ -4,9 +4,9 @@ Include                     ( cotire OPTIONAL )
 Include                     ( pedantic OPTIONAL )
 Include                     ( strip_symbols OPTIONAL )
 
-Option                      ( BUILD_SHARED_CPPHIBERNATE "Build cpphibernate shared library" OFF )
+Include                     ( ${CMAKE_CURRENT_SOURCE_DIR}/../cmake/options.cmake )
 
-Set                         ( BUILD_SHARED_LIBS ${BUILD_SHARED_CPPHIBERNATE} )
+Set                         ( BUILD_SHARED_LIBS ${CPPHIBERNATE_BUILD_SHARED} )
 Set                         ( CMAKE_CXX_STANDARD 17 )
 Set                         ( CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   ${PEDANTIC_C_FLAGS}" )
 Set                         ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${PEDANTIC_CXX_FLAGS}" )

@@ -11,7 +11,17 @@ beg_namespace_cpphibernate_driver_mariadb
     template<typename T_schema, typename T_table, typename T_base_dataset>
     void table_polymorphic_t<T_schema, T_table, T_base_dataset>
         ::emplace(const read_context& context) const
-        { context.emplace<real_dataset_type>(this); }
+    {
+        hana::eval_if(
+            std::is_abstract<real_dataset_type> { },
+            [](){
+                throw misc::hibernate_exception(std::string("can not create dataset of abstract type: ")
+                    + utl::type_helper<real_dataset_type>::name());
+            },
+            [&context, this](auto _){
+                _(context).template emplace<real_dataset_type>(this);
+            });
+    }
 
     template<typename T_schema, typename T_table, typename T_base_dataset>
     template<typename T_dataset, typename T_pred, typename T_include_self>

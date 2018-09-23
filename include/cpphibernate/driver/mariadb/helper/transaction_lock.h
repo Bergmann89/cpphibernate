@@ -24,7 +24,7 @@ beg_namespace_cpphibernate_driver_mariadb
     private:
         using transaction_ptr_type = std::unique_ptr<::cppmariadb::transaction>;
 
-#ifdef cpphibernate_debug
+#ifdef CPPHIBERNATE_DEBUG
 #   define  debug_log(str)  cpphibernate_debug_log(                                                             \
                                 "transaction (id=" << std::setw(8) << std::setfill(' ') << lock.id <<           \
                                 ", counter="       << std::setw(2) << std::setfill(' ') << counter << ") " str)
