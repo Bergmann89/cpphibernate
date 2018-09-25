@@ -2,6 +2,7 @@
 
 #include <boost/hana.hpp>
 #include <cpputils/mp/core.h>
+#include <cpphibernate/options.h>
 
 #ifdef CPPHIBERNATE_DEBUG
 #   include <cpputils/logging/global.h>
