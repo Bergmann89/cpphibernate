@@ -308,11 +308,10 @@ struct select_query_builder_t
         if (_filter.is_excluded(ctx.table))
             return ret;
 
-        ret = true;
-
         /* primary key */
         assert(ctx.table.primary_key_field);
         add_field(*ctx.table.primary_key_field, real_alias);
+        ret = true;
 
         /* data fields */
         for (auto& ptr : ctx.table.data_fields)
@@ -320,7 +319,9 @@ struct select_query_builder_t
             assert(ptr);
             auto& field = *ptr;
             if (!_filter.is_excluded(field))
+            {
                 add_field(field, real_alias);
+            }
         }
 
         /* foreign table one */
@@ -401,17 +402,13 @@ struct select_query_builder_t
                     <<  "`";
 
                 auto it = joins.insert(joins.end(), ss.str());
-                if (add_table({
+                if (!add_table({
                         derived_table,
                         derived_alias,
                         false,
                         true,
                         ctx.is_dynamic,
                     }))
-                {
-                    ret = true;
-                }
-                else
                 {
                     joins.erase(it);
                 }
@@ -826,7 +823,7 @@ std::string build_init_stage2_query(const table_t& table)
             <<  "`"
             <<  incindent
             <<  indent
-            <<  "FOREIGN KEY (`"
+            <<  "FOREIGN KEY IF NOT EXISTS (`"
             <<  ref_key_info.field_name
             <<  "`)"
             <<  indent
@@ -863,7 +860,7 @@ std::string build_init_stage2_query(const table_t& table)
             <<  "`"
             <<  incindent
             <<  indent
-            <<  "FOREIGN KEY (`"
+            <<  "FOREIGN KEY IF NOT EXISTS (`"
             <<  ref_key_info.table_name
             <<  "_id_"
             <<  field_info.field_name
@@ -876,9 +873,12 @@ std::string build_init_stage2_query(const table_t& table)
             <<  "` (`"
             <<  ref_key_info.field_name
             <<  "`)"
-            <<  indent
-            <<  "ON DELETE SET NULL"
-            <<  indent
+            <<  indent;
+        if (field_info.value_is_nullable)
+            os <<  "ON DELETE SET NULL";
+        else
+            os <<  "ON DELETE CASCADE";
+        os  <<  indent
             <<  "ON UPDATE NO ACTION"
             <<  decindent;
     }
@@ -902,7 +902,7 @@ std::string build_init_stage2_query(const table_t& table)
             <<  "`"
             <<  incindent
             <<  indent
-            <<  "FOREIGN KEY (`"
+            <<  "FOREIGN KEY IF NOT EXISTS (`"
             <<  field_info.table_name
             <<  "_id_"
             <<  field_info.field_name

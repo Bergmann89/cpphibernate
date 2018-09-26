@@ -30,8 +30,8 @@ beg_namespace_cpphibernate_driver_mariadb
         using field_set_type = std::set<const field_t*>;
         using table_set_type = std::set<const table_t*>;
 
-        size_t          cache_id { 0 };
-        bool            exclusive;
+        size_t          cache_id    { 0 };
+        bool            exclusive   { true };
         field_set_type  fields;
         table_set_type  tables;
 
