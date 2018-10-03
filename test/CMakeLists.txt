@@ -26,5 +26,6 @@ If                          ( __COTIRE_INCLUDED )
     Cotire                      ( test_cpphibernate )
 EndIf                       ( )
 If                          ( __CMAKE_TESTS_INCLUDED )
-    Add_CMake_Test             ( cpphibernate test_cpphibernate )
+    Add_CMake_Test             ( NAME cpphibernate
+                                 TARGET test_cpphibernate )
 EndIf                       ( )

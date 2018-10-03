@@ -541,3 +541,97 @@ TEST(CppHibernateTests, update_derived3)
     auto context = make_context<driver::mariadb>(test_schema, connection);
     context.update(static_cast<derived2&>(d3));
 }
+
+TEST(CppHibernateTests, update_dynamic_base)
+{
+    StrictMock<mariadb_mock> mock;
+
+    expect_query(mock,  "START TRANSACTION");
+    expect_query(mock,  "SELECT "
+                            "`tbl_derived2`.`tbl_derived2_id` "
+                        "FROM "
+                            "`tbl_derived2` "
+                        "WHERE "
+                            "`tbl_derived2`.`tbl_base_id`='Xf9f13c08-c6e2-11e8-a8d5-f2801f1b9fd1X'",
+                        result_stored({
+                            { "ae0e7888-c6e6-11e8-a8d5-f2801f1b9fd1" }
+                        }));
+    expect_query(mock,  "UPDATE "
+                            "`tbl_base` "
+                        "SET "
+                            "`name`='Xdynamic derived 1X' "
+                        "WHERE "
+                            "`tbl_base_id`=UuidToBin('Xf9f13c08-c6e2-11e8-a8d5-f2801f1b9fd1X')",
+                        result_affected_rows(1));
+    expect_query(mock,  "DELETE "
+                            "`tbl_test2` "
+                        "FROM "
+                            "`tbl_test2` "
+                        "WHERE "
+                            "`tbl_test2_id` IN ("
+                                "SELECT "
+                                    "`tbl_test2_id_test2_nullable` "
+                                "FROM "
+                                    "`tbl_derived2` "
+                                "WHERE "
+                                    "`tbl_derived2_id`=UuidToBin('Xae0e7888-c6e6-11e8-a8d5-f2801f1b9fd1X')"
+                            ")");
+    expect_query(mock,  "DELETE "
+                            "`tbl_test2` "
+                        "FROM "
+                            "`tbl_test2` "
+                        "WHERE "
+                            "`tbl_test2_id` IN ("
+                                "SELECT "
+                                    "`tbl_test2_id_test2_ptr_u` "
+                                "FROM "
+                                    "`tbl_derived2` "
+                                "WHERE "
+                                    "`tbl_derived2_id`=UuidToBin('Xae0e7888-c6e6-11e8-a8d5-f2801f1b9fd1X')"
+                            ")");
+    expect_query(mock,  "DELETE "
+                            "`tbl_test2` "
+                        "FROM "
+                            "`tbl_test2` "
+                        "WHERE "
+                            "`tbl_test2_id` IN ("
+                                "SELECT "
+                                    "`tbl_test2_id_test2_ptr_s` "
+                                "FROM "
+                                    "`tbl_derived2` "
+                                "WHERE "
+                                    "`tbl_derived2_id`=UuidToBin('Xae0e7888-c6e6-11e8-a8d5-f2801f1b9fd1X')"
+                            ")");
+    expect_query(mock,  "UPDATE "
+                            "`tbl_derived2` "
+                        "SET "
+                            "`tbl_base_id`=UuidToBin('Xf9f13c08-c6e2-11e8-a8d5-f2801f1b9fd1X'), "
+                            "`tbl_test2_id_test2_nullable`=UuidToBin(null), "
+                            "`tbl_test2_id_test2_ptr_u`=UuidToBin(null), "
+                            "`tbl_test2_id_test2_ptr_s`=UuidToBin(null) "
+                        "WHERE "
+                            "`tbl_derived2_id`=UuidToBin('Xae0e7888-c6e6-11e8-a8d5-f2801f1b9fd1X')",
+                        result_affected_rows(1));
+    expect_query(mock,  "COMMIT");
+
+    EXPECT_CALL(
+        mock,
+        mysql_real_escape_string(reinterpret_cast<MYSQL*>(0x1111), _, _, _))
+            .Times(AnyNumber())
+            .WillRepeatedly(WithArgs<1, 2, 3>(EscapeString()));
+
+    EXPECT_CALL(
+        mock,
+        mysql_close(
+            reinterpret_cast<MYSQL*>(0x1111)));
+
+    std::unique_ptr<base> b;
+    b.reset(new derived2());
+    auto& d2 = *dynamic_cast<derived2*>(b.get());
+    d2.id = uuid("f9f13c08-c6e2-11e8-a8d5-f2801f1b9fd1");
+    d2.name = "dynamic derived 1";
+
+    ::cppmariadb::connection connection(reinterpret_cast<MYSQL*>(0x1111));
+    auto context = make_context<driver::mariadb>(test_schema, connection);
+    context.update(b);
+}

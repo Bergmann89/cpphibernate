@@ -1125,7 +1125,7 @@ std::string table_t::execute_create_update(
     }
     else
     {
-        primary_key = *primary_key_field->get(context);
+        primary_key = get_primary_key(context);
     }
 
     /* base_key */
@@ -1397,6 +1397,34 @@ std::string table_t::get_where_primary_key(const data_context& context) const
 std::string table_t::build_delete_query(const std::string* where) const
     { return delete_query_builder_t(*this)(where); }
 
+::cppmariadb::statement& table_t::get_statement_key_from_base() const
+{
+    if (!_statement_key_from_base)
+    {
+        if (!base_table)
+            throw exception(std::string("table has no base table: ") + table_name);
+        assert(primary_key_field);
+        assert(base_table);
+        assert(base_table->primary_key_field);
+        auto& key_info = *primary_key_field;
+        auto& base_key = *base_table->primary_key_field;
+        std::ostringstream os;
+        os  <<  "SELECT `"
+            <<  key_info.table_name
+            <<  "`.`"
+            <<  key_info.field_name
+            <<  "` FROM `"
+            <<  key_info.table_name
+            <<  "` WHERE `"
+            <<  key_info.table_name
+            <<  "`.`"
+            <<  base_key.table_name
+            <<  "_id`=?\?";
+        _statement_key_from_base.reset(new ::cppmariadb::statement(os.str()));
+    }
+    return *_statement_key_from_base;
+}
+
 ::cppmariadb::statement& table_t::get_statement_create_table() const
 {
     if (_statement_create_table)
@@ -1499,6 +1527,37 @@ void table_t::execute_foreign_many_delete(const base_context& context) const
     auto& statement  = get_statement_foreign_many_delete();
     cpphibernate_debug_log("execute DELETE old foreign many query: " << statement.query(connection));
     connection.execute(statement);
+}
+
+std::string table_t::get_primary_key(const data_context& context) const
+{
+    assert(primary_key_field);
+    if (primary_key_field->is_default(context))
+    {
+        auto key = get_key_from_base(context);
+        primary_key_field->set(context, key);
+        return key;
+    }
+    else
+    {
+        return *primary_key_field->get(context);
+    }
+}
+
+std::string table_t::get_key_from_base(const data_context& context) const
+{
+    if (!base_table)
+        throw exception(std::string("table has no base table: ") + table_name);
+    auto& statement = get_statement_key_from_base();
+    auto  base_key  = base_table->get_primary_key(context);
+    statement.set(0, base_key);
+    auto result = context.connection.execute_stored(statement);
+    if (!result)
+        throw exception("unable to fetch key from database: unable to execute query!");
+    auto row = result->next();
+    if (!row)
+        throw exception("unable to fetch key from database: result set is empty!");
+    return row->at(0).get<std::string>();
 }
 
 std::string table_t::create_update_base(const create_update_context& context) const

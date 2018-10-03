@@ -98,6 +98,7 @@ beg_namespace_cpphibernate_driver_mariadb
         using map_key       = std::tuple<size_t, const field_t*>;
         using statement_map = std::map<map_key, ::cppmariadb::statement>;
 
+        mutable statement_ptr _statement_key_from_base;
         mutable statement_ptr _statement_create_table;
         mutable statement_ptr _statement_alter_table;
         mutable statement_ptr _statement_insert_into;
@@ -107,6 +108,7 @@ beg_namespace_cpphibernate_driver_mariadb
         mutable statement_ptr _statement_foreign_many_delete;
         mutable statement_ptr _statement_delete;
 
+        ::cppmariadb::statement& get_statement_key_from_base() const;
         ::cppmariadb::statement& get_statement_create_table() const;
         ::cppmariadb::statement* get_statement_alter_table() const;
         ::cppmariadb::statement& get_statement_insert_into() const;
@@ -120,6 +122,9 @@ beg_namespace_cpphibernate_driver_mariadb
         std::string execute_create_update(
             const create_update_context&    context,
             ::cppmariadb::statement&        statement) const;
+
+        std::string get_primary_key(const data_context& context) const;
+        std::string get_key_from_base(const data_context& context) const;
 
         virtual std::string create_update_base(const create_update_context& context) const;
 
