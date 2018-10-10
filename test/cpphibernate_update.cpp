@@ -165,7 +165,7 @@ TEST(CppHibernateTests, update_derived1)
                                     "`tbl_derived1` "
                                 "WHERE "
                                     "`tbl_derived1_id`=UuidToBin('X3d12758c-abb9-11e8-98d0-529269fb1459X') AND "
-                                    "`tbl_test1_id_test1_data`!= UuidToBin('Xe2488a64-b843-11e8-96f8-529269fb1459X')"
+                                    "`tbl_test1_id_test1_data`!=UuidToBin('Xe2488a64-b843-11e8-96f8-529269fb1459X')"
                             ")");
     expect_query(mock,  "UPDATE "
                             "`tbl_derived1` "
@@ -238,7 +238,7 @@ TEST(CppHibernateTests, update_derived2)
                                     "`tbl_derived2` "
                                 "WHERE "
                                     "`tbl_derived2_id`=UuidToBin('X3d127bcc-abb9-11e8-98d0-529269fb1459X') AND "
-                                    "`tbl_test2_id_test2_nullable`!= UuidToBin('X3d1283a6-abb9-11e8-98d0-529269fb1459X')"
+                                    "`tbl_test2_id_test2_nullable`!=UuidToBin('X3d1283a6-abb9-11e8-98d0-529269fb1459X')"
                             ")");
     expect_query(mock,  "SELECT Uuid()",
                         result_used({
@@ -265,7 +265,7 @@ TEST(CppHibernateTests, update_derived2)
                                     "`tbl_derived2` "
                                 "WHERE "
                                     "`tbl_derived2_id`=UuidToBin('X3d127bcc-abb9-11e8-98d0-529269fb1459X') AND "
-                                    "`tbl_test2_id_test2_ptr_u`!= UuidToBin('Xec0f0aac-b8b9-11e8-96f8-529269fb1459X')"
+                                    "`tbl_test2_id_test2_ptr_u`!=UuidToBin('Xec0f0aac-b8b9-11e8-96f8-529269fb1459X')"
                             ")");
     expect_query(mock,  "DELETE "
                             "`tbl_test2` "
@@ -548,11 +548,11 @@ TEST(CppHibernateTests, update_dynamic_base)
 
     expect_query(mock,  "START TRANSACTION");
     expect_query(mock,  "SELECT "
-                            "`tbl_derived2`.`tbl_derived2_id` "
+                            "`tbl_derived2_id` "
                         "FROM "
                             "`tbl_derived2` "
                         "WHERE "
-                            "`tbl_derived2`.`tbl_base_id`='Xf9f13c08-c6e2-11e8-a8d5-f2801f1b9fd1X'",
+                            "`tbl_base_id`='Xf9f13c08-c6e2-11e8-a8d5-f2801f1b9fd1X'",
                         result_stored({
                             { "ae0e7888-c6e6-11e8-a8d5-f2801f1b9fd1" }
                         }));

@@ -199,7 +199,7 @@ throw_not_implemented(::cppmariadb::statement&, get_statement_foreign_many_updat
                 <<  ref_key_info.table_name
                 <<  "_id_"
                 <<  field_name
-                <<  "`!= "
+                <<  "`!="
                 <<  ref_key_info.convert_to_open
                 <<  "?\?"
                 <<  ref_key_info.convert_to_close

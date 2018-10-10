@@ -1410,14 +1410,10 @@ std::string table_t::build_delete_query(const std::string* where) const
         auto& base_key = *base_table->primary_key_field;
         std::ostringstream os;
         os  <<  "SELECT `"
-            <<  key_info.table_name
-            <<  "`.`"
             <<  key_info.field_name
             <<  "` FROM `"
             <<  key_info.table_name
             <<  "` WHERE `"
-            <<  key_info.table_name
-            <<  "`.`"
             <<  base_key.table_name
             <<  "_id`=?\?";
         _statement_key_from_base.reset(new ::cppmariadb::statement(os.str()));
