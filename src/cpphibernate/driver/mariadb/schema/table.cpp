@@ -1297,7 +1297,7 @@ std::string table_t::execute_create_update(
         /* delete non referenced elements */
         if (context.is_update)
         {
-            ref_table.execute_foreign_many_delete(context);
+            ref_table.destroy_cleanup(context, true, true);
         }
     }
 
@@ -1519,6 +1519,8 @@ std::string table_t::build_delete_query(const std::string* where) const
 
 void table_t::execute_foreign_many_delete(const base_context& context) const
 {
+    if (foreign_key_fields.empty())
+        return;
     auto& connection = context.connection;
     auto& statement  = get_statement_foreign_many_delete();
     cpphibernate_debug_log("execute DELETE old foreign many query: " << statement.query(connection));
@@ -1668,28 +1670,24 @@ void table_t::destroy_exec(const destroy_context& context) const
     cpphibernate_debug_log("execute DELETE query: " << statement.query(connection));
     connection.execute(statement);
 
-    destroy_cleanup(context, false, true);
+    for (auto& ptr : foreign_table_many_fields)
+    {
+        assert(ptr);
+        assert(ptr->referenced_table);
+        auto& ref_table = *ptr->referenced_table;
+        ref_table.destroy_cleanup(context, true, true);
+    }
 }
 
 void table_t::destroy_cleanup(const base_context& context, bool check_derived, bool check_base) const
 {
+    execute_foreign_many_delete(context);
+
     for (auto ptr : foreign_table_many_fields)
     {
         assert(ptr);
         assert(ptr->referenced_table);
-
         auto& ref_table = *ptr->referenced_table;
-
-        ref_table.execute_foreign_many_delete(context);
-    }
-
-    for (auto ptr : foreign_table_fields)
-    {
-        assert(ptr);
-        assert(ptr->referenced_table);
-
-        auto& ref_table = *ptr->referenced_table;
-
         ref_table.destroy_cleanup(context, true, true);
     }
 
