@@ -11,6 +11,9 @@ beg_namespace_cpphibernate_driver_mariadb
 
     struct mariadb_driver_t
     {
+    public:
+        using lock_type = std::unique_ptr<transaction_lock>;
+
     private:
         ::cppmariadb::connection*   _connection;
         schema_t                    _schema;
@@ -42,6 +45,9 @@ beg_namespace_cpphibernate_driver_mariadb
 
         inline void clear_filter()
             { _filter.clear(); }
+
+        inline lock_type lock()
+            { return std::make_unique<transaction_lock>(*_connection); }
 
     protected:
         inline void init_impl(bool recreate) const
