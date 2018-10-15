@@ -1,0 +1,3 @@
+[submodule "cmake/modules"]
+	path = cmake/modules
+	url = b3rgmann@git.bergmann89.de:cpp/CmakeModules.git
