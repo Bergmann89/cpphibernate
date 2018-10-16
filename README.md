@@ -10,7 +10,136 @@ Before you can use cpphibernate you need to download and install [the official m
 
 [The cpputils libary](https://git.bergmann89.de/cpp/cpputils) and [the cppmariadb library](https://github.com/Bergmann89/cppmariadb) will be automatically downladed during the build.
 
-### Small Usage Example
+### Simple Usage Example
+
+In this simple example we use a single and simple object, that is stored in the database. The create, update, read and destroy methods and the corresponding SQL queries are shown in the code below.
+
+```cpp
+#include <memory>
+#include <iostream>
+#include <exception>
+#include <cpphibernate.h>
+#include <cpphibernate/driver/mariadb.h>
+
+/* define the class to hibernate */
+
+struct test_data
+{
+    size_t                      id;         //!< ID of the class instance (this field is mandatory for the hibernate engine)
+    std::string                 str_data;   //!< Add string data field
+    ::cpphibernate::string<64>  str64_data; //!< Add a special string data field with a mex length of 64
+
+    uint32_t                    u32;        //!< Add a normal integer data field
+    std::unique_ptr<uint32_t>   u32_ptr_u;  //!< Add a nullable integer data field
+};
+
+/* create the database schema */
+
+constexpr decltype(auto) test_schema = cpphibernate_make_schema(
+    test_schema,                                                // this is the schema name
+    cpphibernate_make_table_name(
+        tbl_test_data,                                          // this is the table name
+        test_data,                                              // this is the referenced class
+        1,                                                      // a unique id for the table
+        cpphibernate_make_id          (&test_data::id),         // pointer to the ID member
+        cpphibernate_make_field       (test_data, str_data),    // define a normal member field
+        cpphibernate_make_field       (test_data, str64_data),  // [...]
+        cpphibernate_make_field       (test_data, u32),         // [...]
+        cpphibernate_make_field       (test_data, u32_ptr_u),   // [...]
+    )
+);
+
+int main(int argc, char** argv)
+{
+    try
+    {
+        using namespace ::cppmariadb;
+        using namespace ::cpphibernate;
+
+        /* establish connection to database */
+        connection c = database::connect("localhost", 3306, "testuser", "password", "", client_flags::empty());
+
+        /* create a hibernation context */
+        auto context = make_context_ptr<driver::mariadb>(test_schema, c);
+
+        /* initialize the database schema */
+        context.init(); /*          CREATE SCHEMA IF NOT EXISTS `test_schema` DEFAULT CHARACTER SET utf8;
+                                    USE `test_schema`;
+                                    CREATE TABLE IF NOT EXISTS `tbl_test_data`
+                                    (
+                                        `tbl_test_data_id` INT UNSIGNED NOT NULL,
+                                        `str_data` VARCHAR(100) NOT NULL,
+                                        `str64_data` VARCHAR(64) NOT NULL,
+                                        `u32` INT UNSIGNED NOT NULL,
+                                        `u32_ptr_u` INT UNSIGNED NULL DEFAULT NULL,
+                                        PRIMARY KEY ( `tbl_test_data_id` ),
+                                        UNIQUE INDEX `index_tbl_test_data_id` ( `tbl_test_data_id` ASC )
+                                    )
+                                    ENGINE = InnoDB
+                                    DEFAULT CHARACTER SET = utf8; */
+
+        /* create some test data */
+        test_data data;
+        data.str_data   = "this is a simple string";
+        data.str64_data = "this is a string with max 64 characters";
+        data.u32        = 123;
+
+        /* create a new dataset in the database:
+         * the new IDs of the object are stored in the corresponding members */
+        context.create(data); /*    INSERT INTO
+                                        `tbl_test_data`
+                                    SET
+                                        `str_data`='this is a simple string',
+                                        `str64_data`='this is a string with max 64 characters',
+                                        `u32`=123,
+                                        `u32_ptr_u`=NULL; */
+
+        /* change some data and update the database */
+        t1.u32_ptr_u.reset(new uint32_t(456));
+        context.update(data); /*    UPDATE
+                                        `tbl_test_data`
+                                    SET
+                                        `str_data`='this is a simple string',
+                                        `str64_data`='this is a string with max 64 characters',
+                                        `u32`=123,
+                                        `u32_ptr_u`=456
+                                    WHERE
+                                        `tbl_test_data_id`=1; */
+
+        /* read back the created object:
+         * if no selector is passed here, the ID member of the object is used */
+        context.read(data); /*      SELECT "
+                                        `tbl_test_data`.`tbl_test_data_id`),
+                                        `tbl_test_data`.`str_data`,
+                                        `tbl_test_data`.`str64_data`,
+                                        `tbl_test_data`.`u32`,
+                                        `tbl_test_data`.`u32_ptr_u`
+                                    FROM
+                                        `tbl_test_data`
+                                    WHERE
+                                        `tbl_test_data`.`tbl_test_data_id`=1; */
+
+        /* delete the object from the database */
+        context.destroy(data); /*   DELETE
+                                        `tbl_test_data`
+                                    FROM
+                                        `tbl_test_data`
+                                    WHERE
+                                        `tbl_test_data`.`tbl_test_data_id`=1; */
+
+        return 0;
+    }
+    catch(const std::exception& ex)
+    {
+        std::cout << ex.what() << std::endl;
+    }
+    return 1
+}
+```
+
+### More Advanced Usage Example
+
+The more advanced example uses a more complex database schema, containing custom defined enum types, one to one and one to many correleation of different tables, a polymorphic class hierarchy with inheritance and some of the std containers like std::unique_ptr or std::vector.
 
 ```cpp
 #include <memory>

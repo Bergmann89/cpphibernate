@@ -26,51 +26,51 @@ beg_namespace_cpphibernate_driver_mariadb
                 { }
 
             template<typename T_clause>
-            inline auto build_clause(T_clause&& clause)
+            inline auto build_clause(T_clause&& p_clause)
                 -> mp::enable_if<modifier::is_where_clause_and<mp::decay_t<T_clause>>>
             {
                 os << "(";
-                build_clause(os, clause.clauses[hana::size_c<0>]);
+                build_clause(os, p_clause.clauses[hana::size_c<0>]);
                 os << ")";
                 hana::for_each(
-                    hana::remove_at(clause.clauses, hana::size_c<0>),
-                    [&](auto& clause) {
+                    hana::remove_at(p_clause.clauses, hana::size_c<0>),
+                    [&](auto& x_clause) {
                         os << " AND (";
-                        build_clause(os, clause);
+                        build_clause(os, x_clause);
                         os << ")";
                     });
             }
 
             template<typename T_clause>
-            inline auto build_clause(T_clause&& clause)
+            inline auto build_clause(T_clause&& p_clause)
                 -> mp::enable_if<modifier::is_where_clause_or<mp::decay_t<T_clause>>>
             {
                 os << "(";
-                build_clause(os, clause.clauses[hana::size_c<0>]);
+                build_clause(os, p_clause.clauses[hana::size_c<0>]);
                 os << ")";
                 hana::for_each(
-                    hana::remove_at(clause.clauses, hana::size_c<0>),
-                    [&](auto& clause) {
+                    hana::remove_at(p_clause.clauses, hana::size_c<0>),
+                    [&](auto& x_clause) {
                         os << " OR (";
-                        build_clause(os, clause);
+                        build_clause(os, x_clause);
                         os << ")";
                     });
             }
 
             template<typename T_clause>
-            inline auto build_clause(T_clause&& clause)
+            inline auto build_clause(T_clause&& p_clause)
                 -> mp::enable_if<modifier::is_where_clause_not<mp::decay_t<T_clause>>>
             {
                 os << "NOT (";
-                build_clause(os, clause.clause);
+                build_clause(os, p_clause.clause);
                 os << ")";
             }
 
             template<typename T_clause>
-            inline auto build_clause(T_clause&& clause)
+            inline auto build_clause(T_clause&& p_clause)
                 -> mp::enable_if<modifier::is_where_clause_equal<mp::decay_t<T_clause>>>
             {
-                auto field_id = misc::get_type_id(hana::type_c<mp::decay_t<decltype(clause.field)>>);
+                auto field_id = misc::get_type_id(hana::type_c<mp::decay_t<decltype(p_clause.field)>>);
                 auto& field = schema.field(field_id);
                 os  <<  "`"
                     <<  field.table_name
@@ -114,28 +114,28 @@ beg_namespace_cpphibernate_driver_mariadb
                 { }
 
             template<typename T_clause>
-            inline auto assign_clause(T_clause&& clause)
+            inline auto assign_clause(T_clause&& p_clause)
                 -> mp::enable_if_c<
                         modifier::is_where_clause_and<mp::decay_t<T_clause>>::value
                     ||  modifier::is_where_clause_or <mp::decay_t<T_clause>>::value>
             {
-                hana::for_each([&](auto& clause) {
-                    assign_clause(clause);
+                hana::for_each(std::forward<T_clause>(p_clause).clauses, [&](auto& x_clause) {
+                    assign_clause(x_clause);
                 });
             }
 
             template<typename T_clause>
-            inline auto assign_clause(T_clause&& clause)
+            inline auto assign_clause(T_clause&& p_clause)
                 -> mp::enable_if<modifier::is_where_clause_not<mp::decay_t<T_clause>>>
             {
-                assign_clause(clause.clause);
+                assign_clause(std::forward<T_clause>(p_clause).clause);
             }
 
             template<typename T_clause>
-            inline auto assign_clause(T_clause&& clause)
+            inline auto assign_clause(T_clause&& p_clause)
                 -> mp::enable_if<modifier::is_where_clause_equal<mp::decay_t<T_clause>>>
             {
-                statement.set(index, clause.value);
+                statement.set(index, std::forward<T_clause>(p_clause).value);
                 ++index;
             }
 

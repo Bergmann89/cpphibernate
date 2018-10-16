@@ -18,9 +18,9 @@ List                        ( FILTER SOURCE_FILES EXCLUDE REGEX "/_[A-Za-z0-9_-]
 Add_Executable              ( test_cpphibernate EXCLUDE_FROM_ALL ${SOURCE_FILES} )
 Target_Link_Libraries       ( test_cpphibernate
                               cpphibernate
-                              gtest
-                              gmock
                               gmock_main
+                              gmock
+                              gtest
                               pthread )
 If                          ( __COTIRE_INCLUDED )
     Cotire                      ( test_cpphibernate )

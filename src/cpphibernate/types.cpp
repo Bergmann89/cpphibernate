@@ -37,11 +37,11 @@ bool uuid::from_string(const std::string& str, uuid& val)
     while(i < 32 && c < e)
     {
         if (*c >= '0' && *c <= '9')
-            val[i >> 1] |= ((*c - '0') << (4 * (1 - (i & 1))));
+            val[i >> 1] = static_cast<uint8_t>(val[i >> 1] | ((*c - '0' +  0) << (4 * (1 - (i & 1)))));
         else if (*c >= 'a' && *c <= 'f')
-            val[i >> 1] |= ((*c - 'a' + 10) << (4 * (1 - (i & 1))));
+            val[i >> 1] = static_cast<uint8_t>(val[i >> 1] | ((*c - 'a' + 10) << (4 * (1 - (i & 1)))));
         else if (*c >= 'A' && *c <= 'F')
-            val[i >> 1] |= ((*c - 'A' + 10) << (4 * (1 - (i & 1))));
+            val[i >> 1] = static_cast<uint8_t>(val[i >> 1] | ((*c - 'A' + 10) << (4 * (1 - (i & 1)))));
         else if (*c != '-')
             return false;
         if (*c != '-')

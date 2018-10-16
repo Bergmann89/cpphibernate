@@ -111,8 +111,8 @@ void schema_t::print(std::ostream& os) const
     os  << indent << '{'
         << incindent
             << indent << "\"schema_name\": \""  <<  schema_name << "\","
-            << indent << "\"tables\": "         <<  misc::print_container(tables, true, [](auto& os, auto& kvp) {
-                                                        kvp.second->print(os);
+            << indent << "\"tables\": "         <<  misc::print_container(tables, true, [](auto& s, auto& kvp) {
+                                                        kvp.second->print(s);
                                                     })
         << decindent
         << indent << '}';

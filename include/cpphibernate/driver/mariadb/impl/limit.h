@@ -14,25 +14,25 @@ beg_namespace_cpphibernate_driver_mariadb
     {
         ::cppmariadb::statement statement;
 
-        limit_builder(const T_modifiers& modifier)
+        limit_builder(const T_modifiers& p_modifier)
         {
             ssize_t limit = -1;
             ssize_t offset = -1;
 
-            hana::for_each(modifier, [&limit, &offset](auto& modifier){
-                using modifier_type  = mp::decay_t<decltype(modifier)>;
+            hana::for_each(p_modifier, [&limit, &offset](auto& x_modifier){
+                using modifier_type  = mp::decay_t<decltype(x_modifier)>;
                 using is_limit_type  = modifier::is_limit_modifier<modifier_type>;
                 using is_offset_type = modifier::is_offset<modifier_type>;
                 hana::eval_if(
                     is_limit_type { },
-                    [&limit, &modifier](auto _){
-                        limit = static_cast<ssize_t>(hana::value(_(modifier).value));
+                    [&limit, &x_modifier](auto _){
+                        limit = static_cast<ssize_t>(hana::value(_(x_modifier).value));
                     },
-                    [&offset, &modifier](){
+                    [&offset, &x_modifier](){
                         hana::eval_if(
                             is_offset_type { },
-                            [&offset, &modifier](auto _){
-                                offset = static_cast<ssize_t>(hana::value(_(modifier).value));
+                            [&offset, &x_modifier](auto _){
+                                offset = static_cast<ssize_t>(hana::value(_(x_modifier).value));
                             },
                             []{
                                 /* no-op */
