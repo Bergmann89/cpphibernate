@@ -17,9 +17,13 @@ beg_namespace_cpphibernate_driver_mariadb
     template<typename T, typename = void>
     struct type_properties
     {
-        static constexpr void type() = delete;
-        static T convert_to(const value_t&) = delete;
-        static value_t convert_from(const T&) = delete;
+        static constexpr void        type              ()               = delete;
+        static           T           convert_to        (const value_t&) = delete;
+        static           value_t     convert_from      (const T&)       = delete;
+        static constexpr const char* convert_to_open   ()               = delete;
+        static constexpr const char* convert_to_close  ()               = delete;
+        static constexpr const char* convert_from_open ()               = delete;
+        static constexpr const char* convert_from_close()               = delete;
     };
 
     template<>
@@ -33,6 +37,18 @@ beg_namespace_cpphibernate_driver_mariadb
 
         static inline value_t convert_from(const bool& value)
             { return utl::to_string(static_cast<int>(value)); }
+
+        static constexpr const char* convert_to_open()
+            { return nullptr; }
+
+        static constexpr const char* convert_to_close()
+            { return nullptr; }
+
+        static constexpr const char* convert_from_open()
+            { return nullptr; }
+
+        static constexpr const char* convert_from_close()
+            { return nullptr; }
     };
 
     template<>
@@ -46,6 +62,18 @@ beg_namespace_cpphibernate_driver_mariadb
 
         static inline value_t convert_from(const uint8_t& value)
             { return utl::to_string(static_cast<int>(value)); }
+
+        static constexpr const char* convert_to_open()
+            { return nullptr; }
+
+        static constexpr const char* convert_to_close()
+            { return nullptr; }
+
+        static constexpr const char* convert_from_open()
+            { return nullptr; }
+
+        static constexpr const char* convert_from_close()
+            { return nullptr; }
     };
 
     template<>
@@ -59,6 +87,18 @@ beg_namespace_cpphibernate_driver_mariadb
 
         static inline value_t convert_from(const int8_t& value)
             { return utl::to_string(static_cast<int>(value)); }
+
+        static constexpr const char* convert_to_open()
+            { return nullptr; }
+
+        static constexpr const char* convert_to_close()
+            { return nullptr; }
+
+        static constexpr const char* convert_from_open()
+            { return nullptr; }
+
+        static constexpr const char* convert_from_close()
+            { return nullptr; }
     };
 
     template<>
@@ -72,6 +112,18 @@ beg_namespace_cpphibernate_driver_mariadb
 
         static inline value_t convert_from(const uint16_t& value)
             { return utl::to_string(value); }
+
+        static constexpr const char* convert_to_open()
+            { return nullptr; }
+
+        static constexpr const char* convert_to_close()
+            { return nullptr; }
+
+        static constexpr const char* convert_from_open()
+            { return nullptr; }
+
+        static constexpr const char* convert_from_close()
+            { return nullptr; }
     };
 
     template<>
@@ -85,6 +137,18 @@ beg_namespace_cpphibernate_driver_mariadb
 
         static inline value_t convert_from(const int16_t& value)
             { return utl::to_string(value); }
+
+        static constexpr const char* convert_to_open()
+            { return nullptr; }
+
+        static constexpr const char* convert_to_close()
+            { return nullptr; }
+
+        static constexpr const char* convert_from_open()
+            { return nullptr; }
+
+        static constexpr const char* convert_from_close()
+            { return nullptr; }
     };
 
     template<>
@@ -98,6 +162,18 @@ beg_namespace_cpphibernate_driver_mariadb
 
         static inline value_t convert_from(const uint32_t& value)
             { return utl::to_string(value); }
+
+        static constexpr const char* convert_to_open()
+            { return nullptr; }
+
+        static constexpr const char* convert_to_close()
+            { return nullptr; }
+
+        static constexpr const char* convert_from_open()
+            { return nullptr; }
+
+        static constexpr const char* convert_from_close()
+            { return nullptr; }
     };
 
     template<>
@@ -111,6 +187,18 @@ beg_namespace_cpphibernate_driver_mariadb
 
         static inline value_t convert_from(const int32_t& value)
             { return utl::to_string(value); }
+
+        static constexpr const char* convert_to_open()
+            { return nullptr; }
+
+        static constexpr const char* convert_to_close()
+            { return nullptr; }
+
+        static constexpr const char* convert_from_open()
+            { return nullptr; }
+
+        static constexpr const char* convert_from_close()
+            { return nullptr; }
     };
 
     template<>
@@ -124,6 +212,18 @@ beg_namespace_cpphibernate_driver_mariadb
 
         static inline value_t convert_from(const uint64_t& value)
             { return utl::to_string(value); }
+
+        static constexpr const char* convert_to_open()
+            { return nullptr; }
+
+        static constexpr const char* convert_to_close()
+            { return nullptr; }
+
+        static constexpr const char* convert_from_open()
+            { return nullptr; }
+
+        static constexpr const char* convert_from_close()
+            { return nullptr; }
     };
 
     template<>
@@ -137,6 +237,18 @@ beg_namespace_cpphibernate_driver_mariadb
 
         static inline value_t convert_from(const int64_t& value)
             { return utl::to_string(value); }
+
+        static constexpr const char* convert_to_open()
+            { return nullptr; }
+
+        static constexpr const char* convert_to_close()
+            { return nullptr; }
+
+        static constexpr const char* convert_from_open()
+            { return nullptr; }
+
+        static constexpr const char* convert_from_close()
+            { return nullptr; }
     };
 
     template<>
@@ -150,6 +262,18 @@ beg_namespace_cpphibernate_driver_mariadb
 
         static inline value_t convert_from(const float& value)
             { return utl::to_string(value); }
+
+        static constexpr const char* convert_to_open()
+            { return nullptr; }
+
+        static constexpr const char* convert_to_close()
+            { return nullptr; }
+
+        static constexpr const char* convert_from_open()
+            { return nullptr; }
+
+        static constexpr const char* convert_from_close()
+            { return nullptr; }
     };
 
     template<>
@@ -163,6 +287,18 @@ beg_namespace_cpphibernate_driver_mariadb
 
         static inline value_t convert_from(const double& value)
             { return utl::to_string(value); }
+
+        static constexpr const char* convert_to_open()
+            { return nullptr; }
+
+        static constexpr const char* convert_to_close()
+            { return nullptr; }
+
+        static constexpr const char* convert_from_open()
+            { return nullptr; }
+
+        static constexpr const char* convert_from_close()
+            { return nullptr; }
     };
 
     template<>
@@ -176,6 +312,43 @@ beg_namespace_cpphibernate_driver_mariadb
 
         static inline value_t convert_from(const uuid& value)
             { return utl::to_string(value); }
+
+        static constexpr const char* convert_to_open()
+            { return nullptr; }
+
+        static constexpr const char* convert_to_close()
+            { return nullptr; }
+
+        static constexpr const char* convert_from_open()
+            { return nullptr; }
+
+        static constexpr const char* convert_from_close()
+            { return nullptr; }
+    };
+
+    template<>
+    struct type_properties<timestamp, void>
+    {
+        static constexpr decltype(auto) type()
+            { return "DATETIME"; }
+
+        static inline timestamp convert_to(const value_t& value)
+            { return timestamp(utl::from_string<uint64_t>(*value)); }
+
+        static inline value_t convert_from(const timestamp& value)
+            { return utl::to_string(static_cast<uint64_t>(value)); }
+
+        static constexpr const char* convert_to_open()
+            { return "FROM_UNIXTIME("; }
+
+        static constexpr const char* convert_to_close()
+            { return ")"; }
+
+        static constexpr const char* convert_from_open()
+            { return "UNIX_TIMESTAMP("; }
+
+        static constexpr const char* convert_from_close()
+            { return ")"; }
     };
 
     template<>
@@ -189,6 +362,18 @@ beg_namespace_cpphibernate_driver_mariadb
 
         static inline value_t convert_from(const std::string& value)
             { return value; }
+
+        static constexpr const char* convert_to_open()
+            { return nullptr; }
+
+        static constexpr const char* convert_to_close()
+            { return nullptr; }
+
+        static constexpr const char* convert_from_open()
+            { return nullptr; }
+
+        static constexpr const char* convert_from_close()
+            { return nullptr; }
     };
 
     template<size_t N>
@@ -208,6 +393,18 @@ beg_namespace_cpphibernate_driver_mariadb
 
         static inline value_t convert_from(const std::string& value)
             { return value; }
+
+        static constexpr const char* convert_to_open()
+            { return nullptr; }
+
+        static constexpr const char* convert_to_close()
+            { return nullptr; }
+
+        static constexpr const char* convert_from_open()
+            { return nullptr; }
+
+        static constexpr const char* convert_from_close()
+            { return nullptr; }
     };
 
     template<typename T>
@@ -237,6 +434,18 @@ beg_namespace_cpphibernate_driver_mariadb
                 ret = value_type_props::convert_from(*v);
             return ret;
         }
+
+        static constexpr const char* convert_to_open()
+            { return nullptr; }
+
+        static constexpr const char* convert_to_close()
+            { return nullptr; }
+
+        static constexpr const char* convert_from_open()
+            { return nullptr; }
+
+        static constexpr const char* convert_from_close()
+            { return nullptr; }
     };
 
     template<typename T>
@@ -277,6 +486,18 @@ beg_namespace_cpphibernate_driver_mariadb
 
         static inline value_t convert_from(const enum_type& value)
             { return utl::enum_conversion<enum_type>::to_string(value, false); }
+
+        static constexpr const char* convert_to_open()
+            { return nullptr; }
+
+        static constexpr const char* convert_to_close()
+            { return nullptr; }
+
+        static constexpr const char* convert_from_open()
+            { return nullptr; }
+
+        static constexpr const char* convert_from_close()
+            { return nullptr; }
     };
 
     template<typename T>
@@ -340,6 +561,18 @@ beg_namespace_cpphibernate_driver_mariadb
             }
             return os.str();
         }
+
+        static constexpr const char* convert_to_open()
+            { return nullptr; }
+
+        static constexpr const char* convert_to_close()
+            { return nullptr; }
+
+        static constexpr const char* convert_from_open()
+            { return nullptr; }
+
+        static constexpr const char* convert_from_close()
+            { return nullptr; }
     };
 
 }

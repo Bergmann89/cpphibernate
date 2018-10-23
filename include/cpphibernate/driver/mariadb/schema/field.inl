@@ -33,7 +33,17 @@ beg_namespace_cpphibernate_driver_mariadb
         ::update()
     {
         base_type::update();
+
         this->type = type_props::type();
+
+        if (type_props::convert_to_open())
+            this->convert_to_open = this->convert_to_open + type_props::convert_to_open();
+        if (type_props::convert_to_close())
+            this->convert_to_close = type_props::convert_to_close() + this->convert_to_close;
+        if (type_props::convert_from_open())
+            this->convert_from_open = this->convert_from_open + type_props::convert_from_open();
+        if (type_props::convert_from_close())
+            this->convert_from_close = type_props::convert_from_close() + this->convert_from_close;
     }
 
     template<typename T_field>

@@ -44,6 +44,7 @@ beg_namespace_cpphibernate_driver_mariadb
                 auto  field_id = misc::get_type_id(hana::type_c<mp::decay_t<T_field>>);
                 auto& f        = schema.field(field_id);
                 filter.fields.emplace(&f);
+                filter.tables.emplace(f.table);
             }
         };
 
@@ -85,6 +86,21 @@ beg_namespace_cpphibernate_driver_mariadb
         cache_id  = static_cast<size_t>(utl::get_unique_id<filter_t, mp::decay_t<T_args>...>());
         int dummy[] = { 0, (__impl::filter_add_element(*this, schema, std::forward<T_args>(args)), void(), 0)... };
         (void)dummy;
+
+        // remove excluded tables if not all fields are excluded
+        auto it = tables.begin();
+        while (it != tables.end())
+        {
+            for (auto& field : (*it)->fields)
+            {
+                if (fields.count(field.get()))
+                {
+                    it = tables.erase(it);
+                    continue;
+                }
+            }
+            ++it;
+        }
     }
 
     void filter_t::clear()

@@ -21,6 +21,28 @@ beg_namespace_cpphibernate
         using std::string::operator=;
     };
 
+    /* timestamp */
+
+    struct timestamp
+    {
+        uint64_t value;
+
+        inline timestamp() = default;
+
+        inline timestamp(uint64_t v)
+            : value(v)
+            { }
+
+        inline timestamp& operator=(const uint64_t& v)
+        {
+            value = v;
+            return *this;
+        }
+
+        inline operator uint64_t() const
+            { return value; }
+    };
+
     /* uuid */
 
     struct uuid

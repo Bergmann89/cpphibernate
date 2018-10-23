@@ -256,15 +256,15 @@ throw_not_implemented(::cppmariadb::statement&, get_statement_foreign_many_updat
         os  <<  "UPDATE `"
             <<  ref_key_info.table_name
             <<  "` SET `"
-            <<  ref_key_info.table_name
+            <<  table_name
             <<  "_id_"
             <<  field_name
             <<  "`=NULL, `"
-            <<  ref_key_info.table_name
+            <<  table_name
             <<  "_index_"
             <<  field_name
             <<  "`=0 WHERE `"
-            <<  ref_key_info.table_name
+            <<  table_name
             <<  "_id_"
             <<  field_name
             <<  "`="

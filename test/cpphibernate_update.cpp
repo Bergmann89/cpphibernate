@@ -395,10 +395,10 @@ TEST(CppHibernateTests, update_derived3)
     expect_query(mock,  "UPDATE "
                             "`tbl_test3` "
                         "SET "
-                            "`tbl_test3_id_test3_list`=NULL, "
-                            "`tbl_test3_index_test3_list`=0 "
+                            "`tbl_derived3_id_test3_list`=NULL, "
+                            "`tbl_derived3_index_test3_list`=0 "
                         "WHERE "
-                            "`tbl_test3_id_test3_list`=UuidToBin('X3d12866c-abb9-11e8-98d0-529269fb1459X')");
+                            "`tbl_derived3_id_test3_list`=UuidToBin('X3d12866c-abb9-11e8-98d0-529269fb1459X')");
     expect_query(mock,  "UPDATE "
                             "`tbl_test3` "
                         "SET "
@@ -438,10 +438,10 @@ TEST(CppHibernateTests, update_derived3)
     expect_query(mock,  "UPDATE "
                             "`tbl_test3` "
                         "SET "
-                            "`tbl_test3_id_test3_vector`=NULL, "
-                            "`tbl_test3_index_test3_vector`=0 "
+                            "`tbl_derived3_id_test3_vector`=NULL, "
+                            "`tbl_derived3_index_test3_vector`=0 "
                         "WHERE "
-                            "`tbl_test3_id_test3_vector`=UuidToBin('X3d12866c-abb9-11e8-98d0-529269fb1459X')");
+                            "`tbl_derived3_id_test3_vector`=UuidToBin('X3d12866c-abb9-11e8-98d0-529269fb1459X')");
     expect_query(mock,  "UPDATE "
                             "`tbl_test3` "
                         "SET "
