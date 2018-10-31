@@ -30,6 +30,10 @@ beg_namespace_cpphibernate_driver_mariadb
                 auto  dataset_id = misc::get_type_id(table.wrapped_dataset);
                 auto& t          = schema.table(dataset_id);
                 filter.tables.emplace(&t);
+                for (auto& ptr : t.fields)
+                {
+                    filter.fields.emplace(ptr.get());
+                }
             }
         };
 
