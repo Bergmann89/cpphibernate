@@ -95,15 +95,18 @@ beg_namespace_cpphibernate_driver_mariadb
         auto it = tables.begin();
         while (it != tables.end())
         {
+            bool removed = false;
             for (auto& field : (*it)->fields)
             {
                 if (fields.count(field.get()))
                 {
                     it = tables.erase(it);
-                    continue;
+                    removed = true;
+                    break;
                 }
             }
-            ++it;
+            if (!removed)
+                ++it;
         }
     }
 
